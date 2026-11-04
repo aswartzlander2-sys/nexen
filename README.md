@@ -1,4 +1,4 @@
-# Nexen 3.1.1
+# Nexen 3.1.2
 
 The NexChat Origin v3 SPA is the root interface, including the home, chat, server, and settings views. Legacy page links open the same SPA.
 
@@ -10,6 +10,9 @@ Nexen has two **separate** modes:
 **Security:** This is an early implementation, not a security-audited production chat server. It serves HTTP, so passwords and messages are not protected against network observers. Use a trusted network or a correctly configured HTTPS reverse proxy, and restrict firewall access. HTTP on a LAN may also limit browser features. Do not expose this server directly to the public internet. A reverse proxy must preserve the original Host header. In the basic independent interface accounts share the same general chat and any signed-in account can download uploaded files. There is no login rate limiting.
 
 ## Install
+
+For a downloaded full ZIP, extract it and run `python3 install-local.py` from its extracted directory after stopping Nexen. This replaces the installed app while preserving data and the ID; it does not require a GitHub release or the older updater.
+
 
 Requires Python 3.9+ and curl (Windows also requires PowerShell). Push the complete package to `main`. The installer chooses the newest stable version from published releases or a numeric version on main, never a B or E build. Review scripts before running them; the bootstrap is downloaded from `main` and the application from the selected release tag or pinned main commit.
 
@@ -44,7 +47,7 @@ Independent accounts, chat and uploads live in `~/.nexen` (or the directory spec
 ## Version and installation ID
 
 ```sh
-nexen version   # Nexen V.3.1.1
+nexen version   # Nexen V.3.1.2
 nexen id        # six-digit ID, including any leading zeros
 ```
 
@@ -92,7 +95,7 @@ Updates download release-tag or pinned-commit source archives over HTTPS and val
 
 ## Connected-mode uploaded wallpapers
 
-Uploaded backgrounds and other managed files require a working storage signer. The previously included browser-side signer exposed secret credentials and was removed. Liquid Glass and background loading are available in Appearance. When no signer is configured, stored uploaded wallpaper keys are left untouched but cannot be loaded; a fallback background is used for Glass. The configured hosted project currently returns 404 for its `nexchat-storage` function; old iDrive images need a signer with access to the existing bucket. New CloudGate uploads additionally need a securely deployed CloudGate proxy and storage-group configuration; exposed default CloudGate credentials were removed. This cannot be fixed by a client-only update.
+Legacy iDrive profile photos and uploaded backgrounds require a working storage signer; otherwise profile photos show an initial instead of a broken image. The previously included browser-side signer exposed secret credentials and was removed. Liquid Glass and background loading are available in Appearance. When no signer is configured, stored uploaded wallpaper keys are left untouched but cannot be loaded; a fallback background is used for Glass. The configured hosted project currently returns 404 for its `nexchat-storage` function; old iDrive images need a signer with access to the existing bucket. New CloudGate uploads additionally need a securely deployed CloudGate proxy and storage-group configuration; exposed default CloudGate credentials were removed. This cannot be fixed by a client-only update.
 
 After deploying and security-reviewing the signer in `supabase/functions/nexchat-storage` with rotated bucket credentials and appropriate bucket CORS, configure its URL (do not enter secret keys here):
 

@@ -253,8 +253,11 @@
   function avatar(p, size = 40, o = {}) {
     p = p || {};
     const fs = Math.round(size * 0.4);
+    // Keep the initial underneath the image. Missing, expired or unsigned
+    // images never show the browser's broken-image icon; a valid image covers
+    // the initial as soon as it loads.
     const inner = usableImg(p.avatar_url)
-      ? `<span class="av" style="width:${size}px;height:${size}px"><img ${imgAttr(p.avatar_url)} alt=""${o.eager ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async"></span>`
+      ? `<span class="av" style="width:${size}px;height:${size}px;font-size:${fs}px;background:${tint(p)}"><span class="av-initial">${esc(initial(nameOf(p)))}</span><img class="av-photo" ${imgAttr(p.avatar_url)} alt=""${o.eager ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async" onload="this.classList.add('is-loaded')" onerror="this.classList.remove('is-loaded')"></span>`
       : `<span class="av" style="width:${size}px;height:${size}px;font-size:${fs}px;background:${tint(p)}">${esc(initial(nameOf(p)))}</span>`;
     const deco = o.deco !== false && size >= 24 ? decoPath(p, 'pfp') : null;
     let out = deco ? `<span class="av-decoed">${inner}${decoImg(deco, 'av-deco', o.still)}</span>` : inner;

@@ -1,3 +1,8 @@
+# Nexen 3.1.2
+
+- Show an initial instead of a broken image when a profile picture cannot load; available pictures still load normally. Old private iDrive photos require a working secure signer.
+- Include a local installer for the downloaded full package to recover from older installed updaters.
+
 # Nexen 3.1.1
 
 - Add `nexen start-isolated` for independent mode; `nexen start` remains connected.

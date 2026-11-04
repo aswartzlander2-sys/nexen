@@ -6,7 +6,7 @@ from urllib.parse import quote
 API='https://api.github.com/repos/aswartzlander2-sys/nexen/releases'
 
 def request(url,limit):
-    req=urllib.request.Request(url,headers={'Accept':'application/vnd.github+json','User-Agent':'Nexen-Installer/3.1.1'})
+    req=urllib.request.Request(url,headers={'Accept':'application/vnd.github+json','User-Agent':'Nexen-Installer/3.1.2'})
     with urllib.request.urlopen(req,timeout=60) as r: data=r.read(limit+1)
     if len(data)>limit: raise ValueError('Download too large')
     return data

@@ -47,6 +47,7 @@
   const ROLE_KEYS = ['user', 'admin', 'sudo'];
   const ROLE_TXT = ['User', 'Admin', 'Sudo Admin'];
   const ROLE_LABEL = { admin: 'Admin', sudo: 'Sudo Admin' };
+  const joinedDate = (u, opts) => u.created_at && !Number.isNaN(Date.parse(u.created_at)) ? new Date(u.created_at).toLocaleDateString([], opts) : 'Unknown';
   const DRIVE_DEFAULT_GB = 5;
   const quotaOf = (u) => Number(u?.drive_quota_gb) || DRIVE_DEFAULT_GB;
 
@@ -206,7 +207,7 @@
     await loadUsers(true);
     if (!still('overview')) return;
     const day = 86400000, now = Date.now();
-    const week = users.filter((u) => now - new Date(u.created_at) < 7 * day).length;
+    const week = users.filter((u) => u.created_at && now - new Date(u.created_at) < 7 * day).length;
     const online = users.filter((u) => P().isOnline(u.id)).length;
     const [servers, pendNitro, pendAppeals, anns, pendStorage] = await Promise.all([
       headCount('servers'),
@@ -235,9 +236,10 @@
     if (anns == null && can('post_announcements')) queue.push(qi('announce', 'fa-database', 'Announcements not set up', 'Run supabase/announcements.sql'));
     body.querySelector('#ovQueue').innerHTML = queue.join('') || '<div class="adm-clear"><i class="fa-solid fa-circle-check"></i> All clear. Nothing waiting on you.</div>';
     body.querySelector('#ovRecent').innerHTML = users.slice(0, 6).map((u) => `<div class="adm-mini" data-open-user="${esc(u.id)}">${P().avatar(u, 30, { presence: true })}
-      <div class="grow"><b>${P().nameText(u)}</b><small>@${esc(u.username)}</small></div><span class="muted adm-t">${esc(fmt.ago(u.created_at))}</span></div>`).join('') || '<p class="muted">No members yet.</p>';
+      <div class="grow"><b>${P().nameText(u)}</b><small>@${esc(u.username)}</small></div><span class="muted adm-t">${esc(u.created_at ? fmt.ago(u.created_at) : 'Unknown')}</span></div>`).join('') || '<p class="muted">No members yet.</p>';
     const days = [...Array(14)].map((_, i) => { const d = new Date(now - (13 - i) * day); d.setHours(0, 0, 0, 0); return { d, n: 0 }; });
     users.forEach((u) => {
+      if (!u.created_at) return;
       const t = new Date(u.created_at); t.setHours(0, 0, 0, 0);
       const hit = days.find((x) => x.d.getTime() === t.getTime());
       if (hit) hit.n++;
@@ -289,8 +291,8 @@
       .filter((u) => !q || u.username.toLowerCase().includes(q) || (u.display_name || '').toLowerCase().includes(q))
       .sort((a, b) => R(b) - R(a));
     tb.innerHTML = rows.slice(0, 400).map((u) => `<tr class="adm-urow" data-open-user="${esc(u.id)}">
-      <td><div class="who">${P().avatar(u, 36, { presence: true })}<div style="min-width:0"><b>${P().nameText(u)}</b> ${u.is_nitro ? '<span class="badge badge-nitro"><i class="fa-solid fa-bolt"></i>Nitro</span>' : ''}${P().roleBadge(u)}${u.is_banned ? ' <span class="badge badge-banned">Banned</span>' : ''}${timedOut(u) ? ' <span class="badge badge-timeout"><i class="fa-solid fa-clock"></i>Timed out</span>' : ''}<small>@${esc(u.username)} · joined ${new Date(u.created_at).toLocaleDateString()}${quotaOf(u) !== DRIVE_DEFAULT_GB ? ` · ${quotaOf(u)} GB drive` : ''}</small></div></div></td>
-      <td class="adm-hide-m muted">${new Date(u.created_at).toLocaleDateString()}</td>
+      <td><div class="who">${P().avatar(u, 36, { presence: true })}<div style="min-width:0"><b>${P().nameText(u)}</b> ${u.is_nitro ? '<span class="badge badge-nitro"><i class="fa-solid fa-bolt"></i>Nitro</span>' : ''}${P().roleBadge(u)}${u.is_banned ? ' <span class="badge badge-banned">Banned</span>' : ''}${timedOut(u) ? ' <span class="badge badge-timeout"><i class="fa-solid fa-clock"></i>Timed out</span>' : ''}<small>@${esc(u.username)} · joined ${joinedDate(u)}${quotaOf(u) !== DRIVE_DEFAULT_GB ? ` · ${quotaOf(u)} GB drive` : ''}</small></div></div></td>
+      <td class="adm-hide-m muted">${joinedDate(u)}</td>
       <td class="adm-hide-m muted">${quotaOf(u)} GB</td>
       <td style="text-align:right;white-space:nowrap">${u.id === NX.me.id ? '<span class="badge badge-owner">You</span>'
         : `${canAct(u) && can('ban_users') ? `<button class="adm-ban${u.is_banned ? ' un' : ''}" data-ban="${esc(u.id)}">${u.is_banned ? 'Unban' : 'Ban'}</button>` : (canAct(u) ? '' : '<span class="adm-lock" title="Ranked the same as or above you"><i class="fa-solid fa-lock"></i></span>')}
@@ -342,7 +344,7 @@
         <div class="row" style="margin-top:6px;flex-wrap:wrap">${P().roleBadge(u)}${u.is_nitro ? '<span class="badge badge-nitro"><i class="fa-solid fa-bolt"></i>Nitro</span>' : ''}${u.is_banned ? '<span class="badge badge-banned">Banned</span>' : ''}${timedOut(u) ? '<span class="badge badge-timeout"><i class="fa-solid fa-clock"></i>Timed out</span>' : ''}</div></div></div>
       <div class="adm-facts">
         <div><span>Username</span><b class="mono">${esc(u.username)}</b></div>
-        <div><span>Joined</span><b>${new Date(u.created_at).toLocaleDateString([], { dateStyle: 'medium' })}</b></div>
+        <div><span>Joined</span><b>${joinedDate(u, { dateStyle: 'medium' })}</b></div>
         <div><span>Drive storage</span><b data-quota>${quotaOf(u)} GB</b></div>
         <div><span>Last sign-in</span><b data-last>${canAuth() ? '…' : '—'}</b></div>
         <div><span>Active sessions</span><b data-sess>${canAuth() ? '…' : '—'}</b></div>
@@ -381,7 +383,7 @@
       db().rpc('admin_user_auth', { p_user_id: u.id }).then(({ data, error }) => {
         const row = Array.isArray(data) ? data[0] : data;
         const l = bodyEl.querySelector('[data-last]'), s = bodyEl.querySelector('[data-sess]');
-        if (l) l.textContent = error ? '—' : (row?.last_sign_in_at ? fmt.stamp(row.last_sign_in_at) : 'Never');
+        if (l) l.textContent = error ? '—' : (row?.last_sign_in_at ? fmt.stamp(row.last_sign_in_at) : (window.NEXEN_META?.isolated ? 'Unknown' : 'Never'));
         if (s) s.textContent = error ? '—' : String(row?.sessions ?? 0);
       });
     }
@@ -783,7 +785,7 @@
       <th class="mx-admin" title="Admins"><span class="mx-h"><i class="fa-solid fa-shield-halved"></i><span class="mx-full">Admins</span><span class="mx-short">Admin</span></span></th></tr></thead><tbody>
       ${PERMS.map((p) => `<tr data-k="${p.k}"><td><div class="who"><i class="fa-solid ${p.ic} muted" style="width:18px;text-align:center"></i><div><b>${esc(p.t)}</b><small>${esc(p.d)}</small></div></div></td>
         <td>${window.NEXEN_META?.isolated && editable ? `<input type="checkbox" class="switch" data-role="owner" ${perms.owner[p.k] ? 'checked' : ''} aria-label="${esc(p.t)} for owner">` : (window.NEXEN_META?.isolated && !perms.owner[p.k] ? '<i class="fa-solid fa-circle-minus adm-no"></i>' : '<i class="fa-solid fa-circle-check adm-yes"></i>')}</td>
-        ${['sudo', 'admin'].map((role) => `<td>${editable && !window.NEXEN_META?.isolated ? `<input type="checkbox" class="switch" data-role="${role}" ${perms[role][p.k] ? 'checked' : ''} aria-label="${esc(p.t)} for ${role}">`
+        ${['sudo', 'admin'].map((role) => `<td>${editable ? `<input type="checkbox" class="switch" data-role="${role}" ${perms[role][p.k] ? 'checked' : ''} aria-label="${esc(p.t)} for ${role}">`
           : (perms[role][p.k] ? '<i class="fa-solid fa-circle-check adm-yes"></i>' : '<i class="fa-solid fa-circle-minus adm-no"></i>')}</td>`).join('')}</tr>`).join('')}
     </tbody></table></div>`;
     if (!editable) return;
@@ -795,19 +797,19 @@
         sw.disabled = false;
         if (error) { sw.checked = !on; return NX.toast(adminErr(error), { err: true }); }
         perms[role][k] = on;
-        NX.toast(`${role === 'owner' ? 'Owner' : role === 'sudo' ? 'Sudo Admins' : 'Admins'} ${on ? 'can now' : 'can no longer'}: ${PERMS.find((p) => p.k === k).t.toLowerCase()}.`);
+        NX.toast(window.NEXEN_META?.isolated ? 'Local permission setting saved. Unimplemented actions remain unavailable.' : `${role === 'sudo' ? 'Sudo Admins' : 'Admins'} ${on ? 'can now' : 'can no longer'}: ${PERMS.find((p) => p.k === k).t.toLowerCase()}.`);
       };
     });
   }
 
   /* ============ Owner ============ */
   async function ownerTab() {
-    body.innerHTML = head('Owner controls', window.NEXEN_META?.isolated ? 'Configure local Owner preferences. Admin operations are not yet implemented.' : 'Only you can see this. Decide what Sudo Admins and Admins are allowed to do; it applies instantly and the database enforces it.') + skel(3, 90);
+    body.innerHTML = head('Owner controls', window.NEXEN_META?.isolated ? 'Configure local role settings. Most admin operations are not yet implemented.' : 'Only you can see this. Decide what Sudo Admins and Admins are allowed to do; it applies instantly and the database enforces it.') + skel(3, 90);
     if (myRank() < 3) { body.innerHTML = emptyBox('fa-lock', 'Owner only', ''); return; }
     await Promise.all([loadUsers(), loadPerms(), loadRankRequests()]);
     if (!still('owner')) return;
     const n = (r) => users.filter((u) => R(u) === r).length;
-    body.innerHTML = head('Owner controls', window.NEXEN_META?.isolated ? 'Configure local Owner preferences. Admin operations are not yet implemented.' : 'Only you can see this. Decide what Sudo Admins and Admins are allowed to do; it applies instantly and the database enforces it.') + `
+    body.innerHTML = head('Owner controls', window.NEXEN_META?.isolated ? 'Configure local role settings. Most admin operations are not yet implemented.' : 'Only you can see this. Decide what Sudo Admins and Admins are allowed to do; it applies instantly and the database enforces it.') + `
       <div class="card adm-owner"><div class="adm-row-h">${P().avatar(NX.me, 54, { presence: true })}<div class="grow"><b style="font-size:17px">${P().nameText(NX.me)}</b><br><small style="color:var(--nitro)"><i class="fa-solid fa-crown"></i> Owner of NexChat</small></div>
         <div class="adm-ostats"><button data-goto="roles"><b>${n(2)}</b><small>Sudo Admins</small></button><button data-goto="roles"><b>${n(1)}</b><small>Admins</small></button><button data-goto="users"><b>${users.filter((u) => !R(u)).length}</b><small>Users</small></button></div></div></div>
       ${reviewQueue.length ? `<div class="card"><div class="adm-row-h"><h3><i class="fa-solid fa-inbox"></i> Rank-up requests</h3><span class="muted">${reviewQueue.length} waiting for you</span></div>${requestsHtml()}</div>` : ''}
@@ -817,7 +819,7 @@
       <div class="adm-row-h" style="margin-top:26px"><h2 class="sec-title" style="margin:0">Recent staff activity</h2><button class="btn btn-quiet btn-sm" data-goto="audit">Full log <i class="fa-solid fa-arrow-right"></i></button></div>
       <div data-audit></div>`;
     wireRequests(body);
-    if (window.NEXEN_META?.isolated) body.querySelector('[data-grid]').insertAdjacentHTML('beforebegin','<p class="hint">Owner preferences are saved locally. Most admin actions are not implemented in the isolated backend and remain unavailable regardless of these settings. Owner controls remain accessible to change these switches.</p>');
+    if (window.NEXEN_META?.isolated) body.querySelector('[data-grid]').insertAdjacentHTML('beforebegin','<p class="hint">Role settings are saved locally. Most admin actions are not implemented in the isolated backend and remain unavailable regardless of these settings. Owner controls remain accessible to change these switches. Only permission changes currently appear in the local audit log.</p>');
     if (!permsLive) body.querySelector('[data-grid]').innerHTML = emptyBox('fa-database', 'Permissions aren’t set up yet', 'Run <code>supabase/roles_v2</code> in the Supabase SQL editor, then reload.');
     else paintMatrix(body.querySelector('[data-grid]'), true);
     paintAudit(body.querySelector('[data-audit]'), 8, 'all');
@@ -830,7 +832,7 @@
     unban: () => 'unbanned {t}',
     reset_password: () => 'set a new password for {t}',
     delete_user: (d) => `deleted the account <b>@${esc(d?.username || 'unknown')}</b>`,
-    permission: (d) => `${d?.allowed ? 'allowed' : 'blocked'} <b>${d?.role === 'sudo' ? 'Sudo Admins' : 'Admins'}</b> to ${esc((PERMS.find((p) => p.k === d?.perm)?.t || d?.perm || '').toLowerCase())}`,
+    permission: (d) => `${d?.allowed ? 'allowed' : 'blocked'} <b>${d?.role === 'owner' ? 'Owner' : d?.role === 'sudo' ? 'Sudo Admins' : 'Admins'}</b> to ${esc((PERMS.find((p) => p.k === d?.perm)?.t || d?.perm || '').toLowerCase())}`,
     appeal_accept: () => 'accepted the ban appeal of {t}',
     appeal_decline: () => 'declined the ban appeal of {t}',
     rankup_approve: (d) => `approved {t} for <b>${esc(ROLE_LABEL[d?.role] || d?.role)}</b>`,
@@ -948,6 +950,22 @@
   // used by the message menu in chats
   NX.timeout = { dialog: timeoutDialog, lift: (u) => setTimeoutFor(u, 0, null), active: timedOut, until: untilText };
 
+  document.addEventListener('click', (e) => {
+    if (!window.NEXEN_META?.isolated || tab !== 'nitro' || !body?.isConnected) return;
+    const button=e.target.closest('[data-q-yes], [data-q-no]');
+    if (!button || !body.contains(button) || button.disabled) return;
+    const id=button.closest('[data-qid]')?.dataset.qid;
+    if (!id) return;
+    button.disabled=true;
+    (async () => {
+      const approved=button.hasAttribute('data-q-yes');
+      const note=approved?null:await askReason('Decline this Nitro request');
+      if (!approved && note===null) return;
+      const {error}=await db().from('nitro_requests').update({status:approved?'approved':'denied',review_note:note}).eq('id',id);
+      if (error) return NX.fail(error);
+      NX.toast(approved?'Nitro granted.':'Request declined.'); users=[];nitroTab();
+    })().finally(()=>{button.disabled=false;});
+  }, true);
   function giveNitroDialog() {
     const b = NX.h(`<div class="stack"><div class="field"><label>Username</label><input class="input" data-who placeholder="their username" autocomplete="off" spellcheck="false" autocapitalize="none"></div>
       <div class="adm-gn-hit" data-hit></div></div>`);
@@ -990,6 +1008,7 @@
     setCount('nitro', (data || []).filter((r) => r.status === 'pending').length);
     box.innerHTML = (data || []).map((r) => queueRow({ id: r.id, profile: r.profiles, created_at: r.created_at, msg: r.message, note: r.review_note, pending: r.status === 'pending', tag: r.status === 'pending' ? '' : statusBadge(r.status, 'approved') })).join('')
       || emptyBox('fa-inbox', 'Nothing waiting', 'New Nitro requests land here.');
+    if (window.NEXEN_META?.isolated) return;
     box.querySelectorAll('[data-qid]').forEach((row) => {
       const id = row.dataset.qid;
       row.querySelector('[data-q-yes]')?.addEventListener('click', async () => {

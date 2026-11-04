@@ -1,3 +1,20 @@
+# Nexen 3.2.4
+
+- Record account creation and latest successful login, and show unexpired session counts to authorized local Owners. Existing creation dates that were never recorded are shown as Unknown.
+- Includes the initial local server, channel and message implementation from 3.2.3; multiuser membership and most independent features remain incomplete.
+
+# Nexen 3.2.3
+
+- Began local Supabase-compatible server/channel/message storage for server owners. Membership, invitations, other chat features, and full backend compatibility remain incomplete.
+
+# Nexen 3.2.2
+
+- Added local Nitro requests, owner review and grant/revoke, profile status and permission-change/Nitro audit records. Local role and Nitro customization support is still incomplete; storage, appeals and other admin operations remain unimplemented.
+
+# Nexen 3.2.1
+
+- Owner can save local permission settings for all three roles; permission changes are recorded in a local audit log. Other admin operations and most independent features remain unimplemented; these settings are not a complete authorization system.
+
 # Nexen 3.2.0
 
 - Isolated mode allows browser internet access and automatically loads the original weather widget. Local application data continues to use the independent backend. Independent backend features remain incomplete.

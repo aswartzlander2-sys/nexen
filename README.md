@@ -1,4 +1,4 @@
-# Nexen 2.1.0
+# Nexen 2.1.1
 
 Nexen has two **separate** modes:
 
@@ -9,7 +9,7 @@ Nexen has two **separate** modes:
 
 ## Install
 
-Requires Python 3.9+ and curl (Windows also requires PowerShell). Push these files to the `main` branch of `https://github.com/aswartzlander2-sys/nexen` first. Review scripts before running them; they download and execute code from that branch.
+Requires Python 3.9+ and curl (Windows also requires PowerShell). Push the installer files to `main` and publish at least one stable GitHub Release first; the repository currently has no published releases. The installers choose the newest published stable tag, never a B or E build. Review scripts before running them; the bootstrap is downloaded from `main` and the application from the selected release tag.
 
 Linux:
 ```sh
@@ -38,11 +38,11 @@ Independent accounts, chat and uploads live in `~/.nexen` (or the directory spec
 ## Version and installation ID
 
 ```sh
-nexen version   # Nexen V.2.1.0
+nexen version   # Nexen V.2.1.1
 nexen id        # six-digit ID, including any leading zeros
 ```
 
-The first `nexen id` or `nexen start` generates a random ID and stores it in `~/.nexen-identity`, separately from the program and `~/.nexen` data. It survives stopping, normal application removal/reinstallation, updates, and `nexen remove anylist`, provided this identity file is retained. Keep a backup if you need to preserve it through operating-system reinstall, profile deletion or disk replacement. If the file is deleted, a new ID is generated. The ID is not a secret; it is displayed to anyone who can access the Nexen UI.
+The first `nexen id` or independent `nexen start --no-contact` generates a random ID and stores it in `~/.nexen-identity`, separately from the program and `~/.nexen` data. It survives stopping, normal application removal/reinstallation, updates, and `nexen remove anylist`, provided this identity file is retained. Keep a backup if you need to preserve it through operating-system reinstall, profile deletion or disk replacement. If the file is deleted, a new ID is generated. The ID is not a secret; it is displayed in independent mode to anyone who can access that Nexen UI. Connected mode does not display it. `nexen id` remains available in either mode.
 
 The identifier is per OS user account, not guaranteed to be shared by different users on the same computer. It is randomly chosen from one million possibilities, so two installations can occasionally get the same ID; six digits cannot guarantee global uniqueness. If `NEXEN_IDENTITY_FILE` is set, that path is used instead, and must also be retained.
 
@@ -65,23 +65,24 @@ nexen start --no-contact --basic-ui
 
 The original-UI test restricts browser resource requests to the local origin and disables WebRTC; it is not a substitute for firewall-level network isolation or a security audit. The server remains plain HTTP. This test does not change connected mode.
 
-## Update
+## Updates and preview channels
 
-For an installation made with `install.sh` or `install.ps1`:
+For an installer-managed installation:
 
 ```sh
-nexen stop
-nexen update
-nexen start
+nexen update       # newest newer stable GitHub Release; never B or E
+nexen update -B    # newest newer B feature-preview release; never E
 ```
 
-`nexen update` downloads the current `main` branch from GitHub over HTTPS, checks the archive and required files, and replaces only the installed application. It preserves `~/.nexen` (or `NEXEN_STATE_DIR`), including mode settings and local data. Stop the server before updating. The command requires internet access even if you normally run `--no-contact`; it does not change your mode. Updates are not signed or pinned to a release: they trust the current GitHub branch. Push this version to `main` before expecting it to be available to the updater. If you run from a Git checkout, use your usual Git workflow instead.
+A check may run while Nexen is running. If an update is available, stop Nexen before installing it, then run the update command again. If no matching newer version exists, the CLI prints the corresponding no-updates message. A network or API error is reported as an error instead. Both commands require internet access—even if you use `--no-contact`—and preserve the local data and ID. Beta is opt-in per command; a future stable bug-fix release is available via normal `nexen update`, including to someone running an older beta. The updater does not downgrade a newer installed version.
 
-`apt update` and `apt upgrade` cannot update this installation: that requires a published, signed APT repository and a Debian package, neither of which is included. Use `nexen update` instead.
+Releases must be published on GitHub: stable tags follow `v2.1.1`, and beta preview tags follow `v2.2.0B`. E builds such as `v2.2.0E` are development builds and are excluded from both update channels. Merely pushing a branch or creating a tag is not enough: create a GitHub Release for it. See `RELEASING.md`. Current public repository releases were empty when this package was prepared, so the installers and updates cannot offer this version until a stable release is actually published. No releases have been published by this package.
+
+Updates download release-tag source archives over HTTPS and validate the archive structure and bundled version, but are not cryptographically signed. Updates are only supported on installer-managed installations. For a Git checkout use Git. `apt update` and `apt upgrade` cannot update Nexen without a published signed APT repository.
 
 ## Connected-mode uploaded wallpapers
 
-Uploaded backgrounds and other managed files require a working storage signer. The previously included browser-side signer exposed secret credentials and was removed. The configured hosted project currently returns 404 for its `nexchat-storage` function; the app cannot recover old uploaded images or safely upload new ones until the project owner deploys and configures a signer with access to the existing bucket. This cannot be fixed by a client-only update.
+Uploaded backgrounds and other managed files require a working storage signer. The previously included browser-side signer exposed secret credentials and was removed. When no signer is configured, stored uploaded wallpaper keys are left untouched but are not loaded or repeatedly retried; Classic remains the default. The configured hosted project currently returns 404 for its `nexchat-storage` function; the app cannot recover old uploaded images or safely upload new ones until the project owner deploys and configures a signer with access to the existing bucket. This cannot be fixed by a client-only update.
 
 After deploying and security-reviewing the signer in `supabase/functions/nexchat-storage` with rotated bucket credentials and appropriate bucket CORS, configure its URL (do not enter secret keys here):
 
@@ -113,6 +114,6 @@ The original repository documentation identifies exposed iDrive credentials in i
 
 ## Testing and connection troubleshooting
 
-Run `python -m unittest discover -s tests -v` from the repository. Node.js, if installed, is used for an additional embedded JavaScript syntax check. Browser smoke tests covered the basic independent login, chat, upload, reload and logout flows and checked that they made no external requests. The connected login page and hosted authentication endpoint were smoke-tested without a real user account; connected-mode authenticated workflows, Windows installation and all browser/OS combinations have not been verified.
+Run `python -m unittest discover -s tests -v` from the repository. Node.js, if installed, is used for an additional embedded JavaScript syntax check. Browser smoke tests covered the basic independent login, chat, upload, reload and logout flows and checked that they made no external requests. The connected login page and hosted authentication endpoint were smoke-tested without a real user account; connected-mode authenticated workflows, the real connected storage signer, Windows installation and all browser/OS combinations have not been verified.
 
 Network outages, firewall rules, unavailable third-party services, and misconfigured storage can still prevent requests from completing; no software can guarantee that fetches never fail. The UI now reports connection errors with guidance. Verify the Nexen process is running and the device can reach port 63936. In connected mode, the browser also needs access to the Supabase project and its CDN. Never expose a database service-role key in the frontend.

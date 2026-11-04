@@ -1,4 +1,4 @@
-# Introducing Nexen 2.1.0
+# Introducing Nexen 2.1.1
 
 Want to run NexChat from your own computer? **Nexen** is a command-line launcher with two ways to get started:
 
@@ -9,7 +9,7 @@ The independent original-UI backend is incomplete: its login and home shell work
 
 ## Install Nexen
 
-You'll need **Python 3.9 or newer**. Run the command for your system after the Nexen files have been published to the `main` branch of the GitHub repository.
+You'll need **Python 3.9 or newer**. Run the command for your system after a stable GitHub Release has been published.
 
 **Linux**
 ```sh
@@ -45,7 +45,7 @@ A plain `nexen start` always starts connected mode. Use `--no-contact` each time
 nexen stop
 ```
 
-Once installed, run `nexen update` while Nexen is stopped to fetch the latest version from GitHub. The updater keeps your local data and settings.
+Once installed, use `nexen update` for stable updates or `nexen update -B` to check for opt-in beta feature previews. If an update is available, stop Nexen before installing it. The updater keeps your local data and settings.
 
 **Security note:** Nexen currently serves HTTP, not HTTPS, and is not security-audited. Use it on a trusted network or behind a properly configured HTTPS reverse proxy; don't expose it directly to the public internet. See the repository README for data removal commands, backups, security notes, and known limitations.
 

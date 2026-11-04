@@ -507,8 +507,9 @@ window.UI = (function () {
   }
 
   /* Panel style: 'solid' (Midnight, default) or 'glass' (Liquid glass). */
-  function applyStyle(style) {
-    window.Glass?.set(style === 'glass');
+  function applyStyle(_style) {
+    // Nexen always uses the classic appearance, even for old saved profiles.
+    window.Glass?.set(false);
   }
 
   function applyBackground(theme) {
@@ -518,6 +519,11 @@ window.UI = (function () {
     clearTimeout(backgroundTimer);
     const key = wallpaperKey(t);
     if (key) {
+      // A stored key cannot be loaded without a signer; keep the profile data
+      // intact but use the default background rather than repeatedly retrying.
+      if (!window.NEXCHAT_CONFIG?.STORAGE_ENDPOINT && !window.__nx_tp) {
+        return applyBackground({ ...t, dash_wallpaper_key: null, dash_bg: null });
+      }
       // Never paint a persisted signature. Resolve the stable key at runtime.
       return wallpaperUrl(key).then((url) => {
         if (version !== backgroundVersion) return;
@@ -531,8 +537,8 @@ window.UI = (function () {
           warnedWallpaperKey = key;
           toast('Wallpaper could not load. Check the storage signer configuration and network connection.', true);
         }
-        // A temporary network failure must not make the setting disappear.
-        backgroundTimer = setTimeout(() => applyBackground(t), 60 * 1000);
+        // Keep the saved setting but do not continuously retry an unreachable signer.
+        // A later page load or an explicit appearance change can try again.
       });
     }
     const root = document.documentElement.style;

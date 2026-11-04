@@ -44,7 +44,7 @@ def serve(token):
         def do_GET(self):
             from urllib.parse import urlsplit
             if urlsplit(self.path).path == '/__nexen/meta':
-                data=json.dumps({'version':identity.VERSION,'id':identity.get_id()}).encode('utf-8')
+                data=json.dumps({'version':identity.VERSION,'id':identity.get_id() if config['mode']=='isolated' else None}).encode('utf-8')
                 self.send_response(200);self.send_header('Content-Type','application/json; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
             if config['mode'] == 'isolated' and not config.get('original_ui_test'): return isolated.handle(self, STATE, config.get('login_only',False))
             if config['mode'] == 'isolated' and self.path.startswith('/api/'): return isolated.handle(self, STATE, config.get('login_only',False))
@@ -95,7 +95,7 @@ def main():
     p=argparse.ArgumentParser(prog='nexen', description='Nexen ' + identity.VERSION)
     sub=p.add_subparsers(dest='cmd', required=True)
     start=sub.add_parser('start'); start.add_argument('--no-contact', action='store_true'); start.add_argument('--connected', action='store_true'); start.add_argument('-L', action='store_true'); start.add_argument('--allow-signup', action='store_true'); start.add_argument('--original-ui-test', action='store_true'); start.add_argument('--basic-ui', action='store_true')
-    sub.add_parser('stop'); sub.add_parser('update'); sub.add_parser('id'); sub.add_parser('version'); storage=sub.add_parser('storage-endpoint'); storage.add_argument('url', help='HTTPS signer URL, or off to disable'); rem=sub.add_parser('remove'); rem.add_argument('category', choices=['usr-list','admin-policy','photos','chats','drive-assets','anylist']); rem.add_argument('--yes',action='store_true')
+    sub.add_parser('stop'); update=sub.add_parser('update'); update.add_argument('-B',action='store_true',help='install the latest newer beta preview'); sub.add_parser('id'); sub.add_parser('version'); storage=sub.add_parser('storage-endpoint'); storage.add_argument('url', help='HTTPS signer URL, or off to disable'); rem=sub.add_parser('remove'); rem.add_argument('category', choices=['usr-list','admin-policy','photos','chats','drive-assets','anylist']); rem.add_argument('--yes',action='store_true')
     worker=sub.add_parser('_serve'); worker.add_argument('token')
     args=p.parse_args()
     if args.cmd == '_serve': return serve(args.token)
@@ -105,22 +105,31 @@ def main():
         try: print(identity.get_id()); return 0
         except (OSError,ValueError) as e: print('Could not read or create Nexen ID: '+str(e),file=sys.stderr); return 1
     if args.cmd == 'update':
-        progress('Checking installation and server status...')
         if ROOT != updater.install_root().resolve():
             print('Updates are only supported for installer-managed installations. Update this checkout with git instead.',file=sys.stderr); return 1
+        try:
+            release=updater.find_update(identity.VERSION,beta=args.B)
+        except Exception as e:
+            print('Could not check GitHub for updates: '+str(e),file=sys.stderr); return 1
+        if release is None:
+            print('There are no updates or feature previews available at this time.' if args.B else 'There are no updates available at this time.')
+            return 0
         r=record()
         if r and request('/__nexen/status',r.get('token','')):
-            print('Stop Nexen before updating.',file=sys.stderr); return 1
+            print('Update %s is available. Stop Nexen before installing it.' % release,file=sys.stderr); return 1
         import socket
         try:
             with socket.create_connection(('127.0.0.1',PORT),timeout=1):
                 print('Port 63936 is in use; stop the service before updating.',file=sys.stderr); return 1
         except OSError: pass
+        ident=identity.identity_path().resolve()
+        if ident == ROOT or ROOT in ident.parents:
+            print('Identity file is inside the application directory; move it before updating.',file=sys.stderr); return 1
         try:
-            progress('Downloading the latest main branch from GitHub...')
-            archive = updater.download()
+            progress('Update available: %s. Downloading from GitHub...' % release)
+            archive=updater.download(release)
             progress('Download complete; validating archive and replacing application files...')
-            updater.apply_archive(archive,ROOT,STATE)
+            updater.apply_archive(archive,ROOT,STATE,expected_version=release)
         except Exception as e:
             print('Update failed; your existing installation and data should be unchanged: '+str(e),file=sys.stderr); return 1
         progress('Update complete; local data and settings were preserved.')
@@ -161,7 +170,11 @@ def main():
             progress('Shutdown requested; waiting for the server to stop...')
             for _ in range(50):
                 if not request('/__nexen/status',r.get('token','')):
-                    progress('Nexen stopped. Data and settings were kept in %s.' % STATE); return 0
+                    import socket
+                    try:
+                        with socket.create_connection(('127.0.0.1',PORT),timeout=.2): pass
+                    except OSError:
+                        progress('Nexen stopped. Data and settings were kept in %s.' % STATE); return 0
                 time.sleep(.1)
             print('Shutdown was requested but could not be confirmed. Check the server log.',file=sys.stderr); return 1
         print('No controllable Nexen session found.', file=sys.stderr); return 1
@@ -190,9 +203,11 @@ def main():
         print('The original-UI local test requires --no-contact.',file=sys.stderr); return 1
     if config['mode']=='connected' and args.L:
         print('Login-only mode cannot be enforced against the hosted backend. Use --no-contact or --allow-signup.',file=sys.stderr); return 1
-    try: machine_id=identity.get_id()
-    except (OSError,ValueError) as e: print('Could not read or create Nexen ID: '+str(e),file=sys.stderr); return 1
-    progress('Nexen V.%s • %s' % (identity.VERSION,machine_id))
+    if config['mode']=='isolated':
+        try: machine_id=identity.get_id()
+        except (OSError,ValueError) as e: print('Could not read or create Nexen ID: '+str(e),file=sys.stderr); return 1
+        progress('Nexen V.%s • %s' % (identity.VERSION,machine_id))
+    else: progress('Nexen V.%s' % identity.VERSION)
     progress('Mode: %s; data and settings: %s' % (config['mode'], STATE))
     if config['mode']=='isolated':
         progress('Interface: %s; new accounts: %s.' % ('original UI test (incomplete)' if config.get('original_ui_test') else 'basic local chat', 'disabled' if config.get('login_only') else 'allowed'))
@@ -208,7 +223,8 @@ def main():
         except (ValueError,EOFError,KeyboardInterrupt) as e: print('Owner setup failed: '+str(e),file=sys.stderr); return 1
     tmp=STATE/'config.tmp';tmp.write_text(json.dumps(config));os.replace(tmp,STATE/'config.json')
     progress('Settings saved. Starting server on 0.0.0.0:%d...' % PORT)
-    token=secrets.token_urlsafe(32)
+    # Hex tokens cannot be mistaken for command-line options by argparse.
+    token=secrets.token_hex(32)
     with open(STATE / 'server.log','ab') as log:
         kw = {'stdin':subprocess.DEVNULL, 'stdout':log, 'stderr':log}
         if os.name == 'nt': kw['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS

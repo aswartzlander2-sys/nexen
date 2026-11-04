@@ -8,7 +8,7 @@ window.NEXCHAT_CONFIG = {
   SUPABASE_URL: 'https://xqzibelnvjlmavgrpyve.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxemliZWxudmpsbWF2Z3JweXZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNjg5NjYsImV4cCI6MjEwMjY0NDk2Nn0.kW3xwbSvlaSnhU_eGSjIR8E2HzdxtYvBRxy4wbJ_Xgo',
 
-  // File signing. Leave empty to use the legacy in-browser signer. Once the
+  // File signing. Empty disables managed uploads/wallpapers. Once the
   // `nexchat-storage` Edge Function is deployed (see supabase/README.md), set:
   //   STORAGE_ENDPOINT: 'https://xqzibelnvjlmavgrpyve.supabase.co/functions/v1/nexchat-storage',
   STORAGE_ENDPOINT: '',

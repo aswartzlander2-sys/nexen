@@ -13,7 +13,7 @@
 */
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
-const REPO = '/home/user/nexchat';
+const REPO = require('path').resolve(__dirname, '..');
 
 let pass = 0, fail = 0;
 const ok = (cond, name) => {
@@ -234,7 +234,7 @@ function seed(table, n, cid, key) {
     ok(pending[0]?.textContent.includes('a fresh message'), 'pending bubble shows the text');
     ok(input.value === '', 'input cleared immediately');
 
-    await sleep(950);   // cross the 1s insert; a POLL_FAST tick (800ms) ran meanwhile
+    await sleep(1400);   // cross the 1s insert; a POLL_FAST tick (800ms) ran meanwhile
     const still = window.document.querySelectorAll('#msgs .m.sending');
     ok(still.length === 0, 'pending bubble replaced after insert resolves');
     const sent = db.inserts.filter((x) => x.table === 'messages');
@@ -285,6 +285,24 @@ function seed(table, n, cid, key) {
     ok(sent[0].rows[0].author_id === 'me', 'insert authored by me');
     ok(window.document.querySelectorAll('#msgs .m.sending').length === 0, 'pending bubble swapped for the real row');
     ok(ids(window)[40] === sent[0].rows[0].id, 'sent dm rendered at the bottom');
+  }
+
+  console.log('\nCatch-up without a watermark');
+  for (const [file, url, script, table, key, id] of [
+    ['server.html', 'https://app.test/server.html?id=s1', 'server.js', 'messages', 'channel_id', 'c1'],
+    ['dms.html', 'https://app.test/dms.html?c=conv1', 'dms.js', 'dm_messages', 'conversation_id', 'conv1'],
+  ]) {
+    const db = makeMockDb();
+    const { window } = boot(file, url, db, [script]);
+    await sleep(500);
+    seed(db.state[table], 60, id, key);
+    window.document.dispatchEvent(new window.Event('visibilitychange'));
+    await sleep(400);
+    const shown=ids(window);
+    ok(shown.length === 50 && shown[0] === 'seed10' && shown[49] === 'seed59', `${file}: empty watermark fetches newest 50, not oldest`);
+    ok(!!window.document.querySelector('#msgs .msgs-older'), `${file}: older history remains accessible`);
+    ok(db.inserts.length === 0, `${file}: opening/catch-up does not create messages`);
+    window.close();
   }
 
   console.log(fail ? `\n${pass} passed, ${fail} FAILED` : `\n*** PASS: ${pass} assertions`);

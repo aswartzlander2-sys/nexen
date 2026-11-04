@@ -635,11 +635,15 @@
     try {
       let q = window.db.from('dm_messages')
         .select('*, profiles!author_id(id,username,display_name,avatar_url,accent_color,is_nitro,banner_gif_url,theme)')
-        .eq('conversation_id', cid).order('created_at', { ascending: true }).limit(50);
+        .eq('conversation_id', cid).order('created_at', { ascending: !!since }).limit(since ? 50 : 51);
       if (since) q = q.gt('created_at', since);
       const { data, error } = await q;
       if (!error && data?.length) {
-        for (const m of data) {
+        // Without a watermark, request the newest page (descending) and paint
+        // it chronologically instead of replaying the oldest messages.
+        const recent = since ? data : data.slice(0, 50).reverse();
+        if (!since && data.length > 50) { haveOlder = true; setOlderMarker(); }
+        for (const m of recent) {
           if (!active || active.id !== cid) return;
           if (m.profiles) profiles[m.author_id] = m.profiles;
           if (await appendMessage(m)) await hydrateAtts(m.id, false);

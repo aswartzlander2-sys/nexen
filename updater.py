@@ -1,11 +1,48 @@
 """Update an installer-managed Nexen tree without touching the state directory."""
-import ast, io, os, shutil, stat, tempfile, urllib.request, zipfile
+import ast, io, json, os, re, shutil, stat, tempfile, urllib.request, zipfile
+from urllib.parse import quote
 from pathlib import Path, PurePosixPath
 
-URL='https://github.com/aswartzlander2-sys/nexen/archive/refs/heads/main.zip'
+RELEASES_URL='https://api.github.com/repos/aswartzlander2-sys/nexen/releases'
+ARCHIVE_URL='https://github.com/aswartzlander2-sys/nexen/archive/refs/tags/'
 MAX_DOWNLOAD=50 * 1024 * 1024
 MAX_UNPACKED=150 * 1024 * 1024
 REQUIRED=('nexen.py','isolated.py','updater.py','identity.py','index.html','assets/js/config.js','README.md')
+
+# E builds are development builds, B builds are previews. Stable and B are
+# published as GitHub releases, not by trusting an arbitrary branch head.
+def version_key(tag):
+    m=re.fullmatch(r'v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)([BE]?)',tag)
+    if not m: return None
+    stage={'E':0,'B':1,'':2}[m.group(4)]
+    return tuple(int(m.group(i)) for i in range(1,4))+(stage,)
+
+def find_update(current, beta=False):
+    cur=version_key(current)
+    if cur is None: raise ValueError('Unrecognised installed version: '+current)
+    releases=[]
+    for page in range(1,11):
+        req=urllib.request.Request(RELEASES_URL+'?per_page=100&page='+str(page),headers={'Accept':'application/vnd.github+json','User-Agent':'Nexen-Updater/2.1.1'})
+        with urllib.request.urlopen(req,timeout=30) as r:
+            raw=r.read(5*1024*1024+1)
+        if len(raw)>5*1024*1024: raise ValueError('GitHub release listing is too large')
+        batch=json.loads(raw)
+        if not isinstance(batch,list): raise ValueError('Invalid GitHub release response')
+        releases.extend(batch)
+        if len(batch)<100: break
+    else: raise ValueError('Too many GitHub releases to check safely')
+    choices=[]
+    for release in releases:
+        if not isinstance(release,dict) or release.get('draft'): continue
+        tag=release.get('tag_name')
+        if not isinstance(tag,str): continue
+        key=version_key(tag)
+        if key is None or key<=cur: continue
+        if beta:
+            if not tag.endswith('B'): continue
+        elif tag.endswith(('B','E')) or release.get('prerelease'): continue
+        choices.append((key,tag))
+    return max(choices)[1] if choices else None
 
 def install_root():
     if os.name == 'nt':
@@ -14,14 +51,15 @@ def install_root():
         return Path(local)/'Nexen'/'app'
     return Path.home()/'.local'/'share'/'nexen'
 
-def download():
-    request=urllib.request.Request(URL,headers={'User-Agent':'Nexen-Updater/2.1.0'})
+def download(tag):
+    if version_key(tag) is None: raise ValueError('Invalid release tag')
+    request=urllib.request.Request(ARCHIVE_URL+quote(tag,safe='')+'.zip',headers={'User-Agent':'Nexen-Updater/2.1.1'})
     with urllib.request.urlopen(request,timeout=60) as response:
         data=response.read(MAX_DOWNLOAD+1)
     if len(data)>MAX_DOWNLOAD: raise ValueError('Download exceeds 50 MB')
     return data
 
-def apply_archive(data,target,state):
+def apply_archive(data,target,state,expected_version=None):
     target=Path(target).resolve();state=Path(state).resolve()
     if target == state or target in state.parents:
         raise ValueError('State directory is inside the installation; refusing to update')
@@ -31,10 +69,13 @@ def apply_archive(data,target,state):
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             items=archive.infolist()
             if len(items)>10000 or sum(i.file_size for i in items)>MAX_UNPACKED: raise ValueError('Archive too large')
+            archive_root=None
             for entry in items:
                 name=PurePosixPath(entry.filename)
-                if name.is_absolute() or not name.parts or name.parts[0]!='nexen-main' or any(p in ('..','.') for p in name.parts) or '\\' in entry.filename:
+                if name.is_absolute() or not name.parts or not name.parts[0].startswith('nexen-') or any(p in ('..','.') for p in name.parts) or '\\' in entry.filename:
                     raise ValueError('Invalid archive path')
+                if archive_root is None: archive_root=name.parts[0]
+                elif archive_root != name.parts[0]: raise ValueError('Archive has multiple top-level directories')
                 if stat.S_ISLNK(entry.external_attr >> 16): raise ValueError('Archive symlinks are not allowed')
                 rel=name.parts[1:]
                 if not rel: continue
@@ -47,6 +88,10 @@ def apply_archive(data,target,state):
             if not (staged/item).is_file(): raise ValueError('Update is incomplete: missing '+item)
         for item in ('nexen.py','isolated.py','updater.py','identity.py'):
             ast.parse((staged/item).read_text(encoding='utf-8'),filename=item)
+        if expected_version is not None:
+            tree=ast.parse((staged/'identity.py').read_text(encoding='utf-8'))
+            versions=[n.value.value for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='VERSION' for t in n.targets) and isinstance(n.value,ast.Constant) and isinstance(n.value.value,str)]
+            if versions != [expected_version.removeprefix('v')]: raise ValueError('Release tag and bundled version do not match')
         # Keep rollback outside the temporary directory so a failed restore is
         # never removed by TemporaryDirectory cleanup.
         backup=Path(tempfile.mkdtemp(prefix='.nexen-previous-',dir=target.parent))

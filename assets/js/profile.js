@@ -440,7 +440,7 @@
     wallpaperKey = UI.wallpaperKey(th);
     bgVal = wallpaperKey ? '' : (th.dash_bg || '');
     $('fBgUrl').value = '';
-    if (wallpaperKey) {
+    if (wallpaperKey && (window.NEXCHAT_CONFIG?.STORAGE_ENDPOINT || window.__nx_tp)) {
       const selection = wallpaperSelection;
       UI.wallpaperUrl(wallpaperKey).then((url) => {
         if (selection !== wallpaperSelection) return;
@@ -454,7 +454,7 @@
     chatBlur = th.chat_blur ?? UI.CHAT_BLUR_DEFAULT;
     chatDim = th.chat_dim ?? UI.CHAT_DIM_DEFAULT;
     devMode = !!th.dev_mode;
-    uiStyle = th.ui_style === 'glass' ? 'glass' : 'solid';
+    uiStyle = 'solid';
     document.querySelectorAll('.style-opt').forEach((b) => b.classList.toggle('on', b.dataset.style === uiStyle));
     manualStun = th.manual_stun || [];
     wpFile = null;

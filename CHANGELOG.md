@@ -1,8 +1,10 @@
-# Nexen 2.1.0
+# Nexen 2.1.1
 
-- Plain `nexen start` now always selects connected mode, using the original NexChat interface and hosted services, even if the previous session was independent. Stop any running session before switching.
-- `nexen start --no-contact` selects the original NexChat interface with the incomplete local compatibility backend. It does not yet implement chat, servers, DMs, uploads, calls, admin or settings. `--no-contact --basic-ui` selects the previous basic local chat instead.
-- The local login-only setting and existing data remain saved; the mode must now be selected explicitly on each start.
-- Version displays and `nexen version` now show 2.1.0. The existing six-digit installation ID remains unchanged.
+- Show the six-digit ID only in independent mode; retain it across updates and make it available via `nexen id`.
+- Use Classic appearance and remove the Liquid Glass choice, including for profiles that previously selected glass.
+- Avoid attempting to load or repeatedly retry an uploaded wallpaper when no storage signer is configured. Existing wallpaper settings remain saved. A working signer and original bucket access are still needed for cloud wallpaper uploads and downloads.
+- Fix catch-up without a message watermark to fetch the newest messages, preserve older-history navigation and avoid writing messages on open.
+- Select stable GitHub Releases for normal updates and opt-in B preview Releases for `nexen update -B`; E development builds are not automatically installed. See `RELEASING.md`.
+- Close local SQLite connections after requests.
 
-This package is prepared for release; it is not published to GitHub until you push the files. Connected uploads still require the separately configured secure storage signer.
+The original-UI independent backend is still incomplete. Connected-mode file storage remains unavailable until a safe signer is deployed and configured. This package has not been published to GitHub.

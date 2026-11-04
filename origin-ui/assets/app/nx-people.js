@@ -186,7 +186,7 @@
   function decoImg(path, cls, still) {
     // avatar decorations load eagerly so they don't pop in when a header redraws
     const lazy = /\/profile\//.test(path) && !still ? ' loading="lazy"' : '';
-    return `<img class="${cls}" src="${esc(decoSrc(path, still))}" onerror="this.onerror=null;this.src='${esc(path)}'" alt=""${lazy} decoding="async">`;
+    return `<img class="${cls}" src="${esc(decoSrc(path, still))}" onload="this.classList.add('is-loaded')" onerror="this.classList.remove('is-loaded');if(!this.dataset.tried){this.dataset.tried='1';this.src='${esc(path)}'}else{this.hidden=true}" alt=""${lazy} decoding="async">`;
   }
   const IMG_EXT = /\.(gif|apng|png|jpe?g|webp|avif)($|\?)/i;
   function haloImage(p) {

@@ -1,3 +1,13 @@
+# Nexen 3.1.4
+
+- Hide avatar decorations until their image successfully loads, and hide them after an error, avoiding broken-image icons on top of working photos.
+
+# Nexen 3.1.3
+
+- Show the isolated first Owner as Owner rather than Admin.
+- Fix broken avatar decoration overlays and restore the available avatar frame assets.
+- When a stable update is available, `nexen update` runs the operating-system installer to reinstall the application while preserving local data and ID.
+
 # Nexen 3.1.2
 
 - Show an initial instead of a broken image when a profile picture cannot load; available pictures still load normally. Old private iDrive photos require a working secure signer.

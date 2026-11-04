@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Nexen connected-mode launcher. See README for security and limitations."""
-import argparse, getpass, hmac, http.server, json, os, pathlib, secrets, subprocess, sys, threading, time, urllib.request
+import argparse, getpass, hmac, http.server, json, os, pathlib, secrets, subprocess, sys, tempfile, threading, time, urllib.request
 import isolated
 import updater
 import identity
@@ -101,6 +101,17 @@ def serve(token):
             (STATE / 'session.json').unlink(missing_ok=True)
     return 0
 
+def reinstall_stable():
+    """Download and run the OS installer exactly as in the installation guide."""
+    base='https://raw.githubusercontent.com/aswartzlander2-sys/nexen/main/'
+    windows=sys.platform.startswith('win')
+    with tempfile.TemporaryDirectory(prefix='nexen-update-installer-') as tmp:
+        filename='install.ps1' if windows else 'install.sh'
+        dest=str(pathlib.Path(tmp)/filename)
+        subprocess.run(['curl.exe' if windows else 'curl','-fsSL',base+filename,'-o',dest],check=True)
+        command=['powershell','-ExecutionPolicy','Bypass','-File',dest] if windows else ['sh',dest]
+        subprocess.run(command,check=True)
+
 def main():
     p=argparse.ArgumentParser(prog='nexen', description='Nexen ' + identity.VERSION)
     sub=p.add_subparsers(dest='cmd', required=True)
@@ -120,8 +131,8 @@ def main():
         progress('The installer will ask you to stop Nexen if the server is running.')
         return subprocess.run([sys.executable, str(ROOT/'install.py')]).returncode
     if args.cmd == 'update':
-        if ROOT != updater.install_root().resolve():
-            print('Updates are only supported for installer-managed installations. Update this checkout with git instead.',file=sys.stderr); return 1
+        if args.B and ROOT != updater.install_root().resolve():
+            print('Preview updates are only supported for installer-managed installations. Update this checkout with git instead.',file=sys.stderr); return 1
         try:
             release=updater.find_best_update(identity.VERSION,beta=args.B)
         except Exception as e:
@@ -141,10 +152,14 @@ def main():
         if ident == ROOT or ROOT in ident.parents:
             print('Identity file is inside the application directory; move it before updating.',file=sys.stderr); return 1
         try:
-            progress('Update available: %s. Downloading from GitHub...' % release['version'])
-            archive=updater.download_candidate(release)
-            progress('Download complete; validating archive and replacing application files...')
-            updater.apply_archive(archive,ROOT,STATE,expected_version=release['version'])
+            progress('Update available: %s.' % release['version'])
+            if args.B:
+                archive=updater.download_candidate(release)
+                progress('Validating and installing the preview...')
+                updater.apply_archive(archive,ROOT,STATE,expected_version=release['version'])
+            else:
+                progress('Running the stable installer for this operating system...')
+                reinstall_stable()
         except Exception as e:
             print('Update failed; your existing installation and data should be unchanged: '+str(e),file=sys.stderr); return 1
         progress('Update complete; local data and settings were preserved.')

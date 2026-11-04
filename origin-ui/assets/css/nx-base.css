@@ -249,7 +249,9 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 
 /* Nitro avatar decoration: animated frame over the picture */
 .av-decoed { position: relative; display: inline-flex; flex-shrink: 0; border-radius: 50%; }
-.av-deco { position: absolute; left: 50%; top: 50%; width: 138%; height: 138%; transform: translate(-50%, -50%); max-width: none; pointer-events: none; z-index: 2; }
+.av-deco { position: absolute; left: 50%; top: 50%; width: 138%; height: 138%; transform: translate(-50%, -50%); max-width: none; pointer-events: none; z-index: 2; opacity: 0; }
+.av-deco.is-loaded { opacity: 1; }
+.av-deco[hidden] { display: none !important; }
 
 /* Nitro names */
 @keyframes nxShimmer { from { background-position: 0% 50%; } to { background-position: 220% 50%; } }

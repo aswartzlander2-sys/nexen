@@ -1,4 +1,4 @@
-# Nexen 3.1.2
+# Nexen 3.1.4
 
 The NexChat Origin v3 SPA is the root interface, including the home, chat, server, and settings views. Legacy page links open the same SPA.
 
@@ -38,7 +38,7 @@ nexen stop
 ```
 Open `http://localhost:63936` or `http://<host-LAN-IP>:63936`. The server binds `0.0.0.0`. Only one instance can bind the port. Stop the server before changing settings. A plain `nexen start` always selects connected mode, even after an independent session; to use independent mode again, specify `start-isolated`. Signups are enabled by default on each independent start, even if a previous session used `-L`. Independent data is kept when switching modes. `-L` is enforced by the independent server; it cannot be enforced against the hosted backend and is rejected in connected mode.
 
-On the first `nexen start-isolated`, Nexen prompts for an Owner username and password. It stores the username and a salted password hash in the local database; the same Owner is reused on subsequent independent starts, so the prompt does not repeat. The CLI reports when an existing Owner is reused. To remove **all local users**, including the Owner, stop an independent session and run `nexen remove usr-list`; the next independent start prompts for a new Owner. This also signs out local users. It does not remove chats or files, and `nexen remove anylist` also clears users. Back up the data directory before removing anything.
+On the first `nexen start-isolated`, Nexen prompts for an Owner username and password. It stores the username and a salted password hash in the local database and identifies this account as Owner in the interface; the same Owner is reused on subsequent independent starts, so the prompt does not repeat. The CLI reports when an existing Owner is reused. To remove **all local users**, including the Owner, stop an independent session and run `nexen remove usr-list`; the next independent start prompts for a new Owner. This also signs out local users. It does not remove chats or files, and `nexen remove anylist` also clears users. Back up the data directory before removing anything.
 
 When `-L` is active, account creation is refused by the local server, and Sign in fills the whole tab control. The setting applies only to that session; the next ordinary `nexen start-isolated` allows signup.
 
@@ -47,7 +47,7 @@ Independent accounts, chat and uploads live in `~/.nexen` (or the directory spec
 ## Version and installation ID
 
 ```sh
-nexen version   # Nexen V.3.1.2
+nexen version   # Nexen V.3.1.4
 nexen id        # six-digit ID, including any leading zeros
 ```
 
@@ -91,7 +91,7 @@ A check may run while Nexen is running. If an update is available, stop Nexen be
 
 Stable updates check published stable releases and the numeric version on `main`, choosing the newer. Preview updates (`-B`) check B and E releases and the `experimental` branch when present; they never install a preview without `-B`. Branch downloads are pinned to the commit whose version was checked. Network or malformed-version errors are reported, not treated as “no updates.” A tag or commit must contain the complete application. Older installed versions check releases only: to receive this updater, publish a stable GitHub Release or rerun the installer after pushing this package to main. See `RELEASING.md`.
 
-Updates download release-tag or pinned-commit source archives over HTTPS and validate the archive structure and bundled version, but are not cryptographically signed. Updates are only supported on installer-managed installations. For a Git checkout use Git. `apt update` and `apt upgrade` cannot update Nexen without a published signed APT repository.
+Stable updates download and run the operating-system installer, which selects a stable release or a pinned main commit and preserves the local data and ID. Preview updates use the staged archive updater and are supported only on installer-managed installations. Downloads are not cryptographically signed. `apt update` and `apt upgrade` cannot update Nexen without a published signed APT repository.
 
 ## Connected-mode uploaded wallpapers
 

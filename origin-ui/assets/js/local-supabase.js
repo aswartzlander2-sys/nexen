@@ -28,7 +28,7 @@
       if(this.table==='profiles'){
         const r=await req('/api/me');if(r.error||!r.data)return {data:null,error:r.error||{message:'Not signed in'}};
         const u=r.data;if(this.filters.id && String(this.filters.id)!==String(u.id)) return {data:null,error:unsupported()};
-        const profile={id:String(u.id),username:u.username,display_name:u.username,is_platform_admin:!!u.owner,is_banned:false,theme:{}};
+        const profile={id:String(u.id),username:u.username,display_name:u.username,platform_role:u.owner?'owner':null,is_platform_admin:false,is_banned:false,theme:{}};
         return {data:this.one?profile:[profile],error:null};
       }
       // Only these read-only collections are modelled as empty by this test build.

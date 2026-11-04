@@ -1,4 +1,4 @@
-# Nexen 2.1.2
+# Nexen 3.0.1
 
 Nexen has two **separate** modes:
 
@@ -33,12 +33,16 @@ nexen stop
 ```
 Open `http://localhost:63936` or `http://<host-LAN-IP>:63936`. The server binds `0.0.0.0`. Only one instance can bind the port. Stop the server before changing settings. A plain `nexen start` always selects connected mode, even after an independent session; to use independent mode again, specify `--no-contact`. The independent login-only setting is retained: use `nexen start --no-contact --allow-signup` to re-enable signup. Independent data is kept when switching modes. `-L` is enforced by the independent server; it cannot be enforced against the hosted backend and is rejected in connected mode.
 
+On the first `nexen start --no-contact`, Nexen prompts for an Owner username and password. It stores the username and a salted password hash in the local database; the same Owner is reused on subsequent independent starts, so the prompt does not repeat. The CLI reports when an existing Owner is reused. To remove **all local users**, including the Owner, stop an independent session and run `nexen remove usr-list`; the next independent start prompts for a new Owner. This also signs out local users. It does not remove chats or files, and `nexen remove anylist` also clears users. Back up the data directory before removing anything.
+
+When `-L` is active, account creation is refused by the local server, and Sign in fills the whole tab control. The setting persists for independent mode until you use `--no-contact --allow-signup`.
+
 Independent accounts, chat and uploads live in `~/.nexen` (or the directory specified by `NEXEN_STATE_DIR`); backing up that directory while stopped preserves them. Connected-mode data stays on the original services. Settings and data are not migrated between modes. Linux sets the server process name to `NexChats Nexen`; other OSes may show Python instead.
 
 ## Version and installation ID
 
 ```sh
-nexen version   # Nexen V.2.1.2
+nexen version   # Nexen V.3.0.1
 nexen id        # six-digit ID, including any leading zeros
 ```
 
@@ -46,9 +50,9 @@ The first `nexen id` or independent `nexen start --no-contact` generates a rando
 
 The identifier is per OS user account, not guaranteed to be shared by different users on the same computer. It is randomly chosen from one million possibilities, so two installations can occasionally get the same ID; six digits cannot guarantee global uniqueness. If `NEXEN_IDENTITY_FILE` is set, that path is used instead, and must also be retained.
 
-## Experimental original-UI test (incomplete)
+## Independent NexChat 3 UI (incomplete)
 
-Independent mode serves the repository's original NexChat login and home pages using local fonts and a new local compatibility adapter:
+Independent mode serves the requested NexChat 3 login and home pages using local fonts and a new local compatibility adapter:
 
 ```sh
 nexen stop
@@ -57,13 +61,13 @@ nexen start --no-contact
 
 Sign in with your existing independent-mode account. The login, signup, Owner identification, and original home shell are connected to the local account database. In a browser smoke test the login and home pages made no external requests. `-L` still disables registration at the server. Repeat `--no-contact` when starting an independent session; a plain start uses connected mode.
 
-**This is not a completed local NexChat backend.** The home shell shows empty server, friend and announcement lists. Server creation, actual chat/DMs, profiles/settings, file uploads, calls, admin, Nitro, and realtime are not implemented by this adapter; most interactions on those pages will fail. Do not use this test for real conversations. No existing simple-chat data is deleted, but it is not displayed in the original-UI test. To return to the existing independent chat, stop the server and run:
+**This is not a completed local NexChat backend.** The home shell shows empty local server and friend lists; built-in news is still visible. Server creation, actual chat/DMs, profiles/settings, file uploads, calls, admin, Nitro, and realtime are not implemented by this adapter; most interactions on those pages will fail. Do not use this test for real conversations. No existing simple-chat data is deleted, but it is not displayed in the original-UI test. To return to the existing independent chat, stop the server and run:
 
 ```sh
 nexen start --no-contact --basic-ui
 ```
 
-The original-UI test restricts browser resource requests to the local origin and disables WebRTC; it is not a substitute for firewall-level network isolation or a security audit. The server remains plain HTTP. This test does not change connected mode.
+The independent UI restricts browser resource requests to the local origin and disables WebRTC; it is not a substitute for firewall-level network isolation or a security audit. The server remains plain HTTP. This test does not change connected mode.
 
 ## Updates and preview channels
 
@@ -76,13 +80,13 @@ nexen update -B    # newest newer B feature-preview release; never E
 
 A check may run while Nexen is running. If an update is available, stop Nexen before installing it, then run the update command again. If no matching newer version exists, the CLI prints the corresponding no-updates message. A network or API error is reported as an error instead. Both commands require internet access—even if you use `--no-contact`—and preserve the local data and ID. Beta is opt-in per command; a future stable bug-fix release is available via normal `nexen update`, including to someone running an older beta. The updater does not downgrade a newer installed version.
 
-Releases must be published on GitHub: stable tags follow `v2.1.2`, and beta preview tags follow `v2.2.0B`. E builds such as `v2.2.0E` are development builds and are excluded from both update channels. Merely pushing a branch or creating a tag is not enough: create a GitHub Release for it. See `RELEASING.md`. Current public repository releases were empty when this package was prepared, so the installers and updates cannot offer this version until a stable release is actually published. No releases have been published by this package.
+Releases must be published on GitHub: stable tags follow `v3.0.1`, and beta preview tags follow `v3.1.0B`. E builds such as `v3.1.0E` are development builds and are excluded from both update channels. Merely pushing a branch or creating a tag is not enough: create a GitHub Release for it. See `RELEASING.md`. Current public repository releases were empty when this package was prepared, so the installers and updates cannot offer this version until a stable release is actually published. No releases have been published by this package.
 
 Updates download release-tag source archives over HTTPS and validate the archive structure and bundled version, but are not cryptographically signed. Updates are only supported on installer-managed installations. For a Git checkout use Git. `apt update` and `apt upgrade` cannot update Nexen without a published signed APT repository.
 
 ## Connected-mode uploaded wallpapers
 
-Uploaded backgrounds and other managed files require a working storage signer. The previously included browser-side signer exposed secret credentials and was removed. When no signer is configured, stored uploaded wallpaper keys are left untouched but are not loaded or repeatedly retried; Classic remains the default. The configured hosted project currently returns 404 for its `nexchat-storage` function; the app cannot recover old uploaded images or safely upload new ones until the project owner deploys and configures a signer with access to the existing bucket. This cannot be fixed by a client-only update.
+Uploaded backgrounds and other managed files require a working storage signer. The previously included browser-side signer exposed secret credentials and was removed. Liquid Glass and background loading are available in Appearance. When no signer is configured, stored uploaded wallpaper keys are left untouched but cannot be loaded; a fallback background is used for Glass. The configured hosted project currently returns 404 for its `nexchat-storage` function; old iDrive images need a signer with access to the existing bucket. New CloudGate uploads additionally need a securely deployed CloudGate proxy and storage-group configuration; exposed default CloudGate credentials were removed. This cannot be fixed by a client-only update.
 
 After deploying and security-reviewing the signer in `supabase/functions/nexchat-storage` with rotated bucket credentials and appropriate bucket CORS, configure its URL (do not enter secret keys here):
 

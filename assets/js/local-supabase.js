@@ -41,5 +41,11 @@
   window.db={auth,from:table=>new Query(table),rpc:async(name)=>name==='is_username_available'?{data:true,error:null}:{data:null,error:unsupported()},channel,removeChannel:async()=>{},storage:{from:()=>({upload:async()=>({data:null,error:unsupported()}),getPublicUrl:()=>({data:{publicUrl:''}})})}};
   window.authReady=auth.getSession().then(r=>r.data.session);
   // Account creation remains server-enforced; hide the signup tab when disabled.
-  req('/api/config').then(r=>{if(r.data && !r.data.signup){const tab=document.getElementById('tabUp');if(tab)tab.style.display='none'}});
+  req('/api/config').then(r=>{
+    if(r.data && !r.data.signup){
+      const tab=document.getElementById('tabUp');
+      if(tab){tab.hidden=true;tab.closest('.segmented')?.classList.add('login-only');}
+      document.getElementById('tabIn')?.click();
+    }
+  });
 })();

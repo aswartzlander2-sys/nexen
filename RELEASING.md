@@ -4,13 +4,13 @@ These files do not publish themselves. The maintainer must push them and create 
 
 ## Stable and bug fixes
 
-1. On the stable code you intend to ship, set `VERSION` in `identity.py` to a numeric version such as `2.1.2`. Run the tests. Existing UI version labels read the value dynamically.
-2. Push the code and create a matching Git tag, e.g. `git tag v2.1.2` then `git push origin main --tags`.
+1. On the stable code you intend to ship, set `VERSION` in `identity.py` to a numeric version such as `3.0.1`. Run the tests. Existing UI version labels read the value dynamically.
+2. Push the code and create a matching Git tag, e.g. `git tag v3.0.1` then `git push origin main --tags`.
 3. In GitHub, create a **non-prerelease** Release from that tag. Only then do normal installers and `nexen update` see it. A bug-fix release can be published straight to this channel; it does not have to wait for an E or B build.
 
 ## Beta feature previews (B)
 
-When you choose to preview a feature, set `identity.py`'s version to the desired preview version, e.g. `2.2.0B`, create a matching tag `v2.2.0B`, push it, and publish a GitHub Release marked prerelease. Only `nexen update -B` selects B tags. Use a numerically newer version than the installed stable release; the updater will not downgrade.
+When you choose to preview a feature, set `identity.py`'s version to the desired preview version, e.g. `2.2.0B`, create a matching tag `v3.1.0B`, push it, and publish a GitHub Release marked prerelease. Only `nexen update -B` selects B tags. Use a numerically newer version than the installed stable release; the updater will not downgrade.
 
 ## Experimental development (E)
 

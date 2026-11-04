@@ -5,6 +5,7 @@ import isolated
 import updater
 import identity
 ROOT = pathlib.Path(__file__).resolve().parent
+UI_ROOT = ROOT / 'origin-ui'
 STATE = pathlib.Path(os.environ.get('NEXEN_STATE_DIR', pathlib.Path.home() / '.nexen'))
 PORT = 63936
 
@@ -30,7 +31,7 @@ def serve(token):
             ctypes.CDLL(None).prctl(15, b'NexChats Nexen', 0, 0, 0)
         except Exception: pass
     class Handler(http.server.SimpleHTTPRequestHandler):
-        def __init__(self, *args, **kwargs): super().__init__(*args, directory=str(ROOT), **kwargs)
+        def __init__(self, *args, **kwargs): super().__init__(*args, directory=str(UI_ROOT), **kwargs)
         def do_POST(self):
             if not self.path.startswith('/__nexen/'):
                 if config['mode'] == 'isolated': return isolated.handle(self, STATE, config.get('login_only',False))
@@ -46,6 +47,10 @@ def serve(token):
             if urlsplit(self.path).path == '/__nexen/meta':
                 data=json.dumps({'version':identity.VERSION,'id':identity.get_id() if config['mode']=='isolated' else None}).encode('utf-8')
                 self.send_response(200);self.send_header('Content-Type','application/json; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
+            if urlsplit(self.path).path == '/nexen-runtime.js':
+                meta = {'version': identity.VERSION, 'id': identity.get_id() if config['mode']=='isolated' else None, 'loginOnly': config['mode']=='isolated' and bool(config.get('login_only')), 'isolated': config['mode']=='isolated'}
+                data=('window.NEXEN_META = '+json.dumps(meta)+';').encode('utf-8')
+                self.send_response(200); self.send_header('Content-Type','application/javascript; charset=utf-8'); self.send_header('Cache-Control','no-store'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data); return
             if config['mode'] == 'isolated' and not config.get('original_ui_test'): return isolated.handle(self, STATE, config.get('login_only',False))
             if config['mode'] == 'isolated' and self.path.startswith('/api/'): return isolated.handle(self, STATE, config.get('login_only',False))
             from urllib.parse import unquote, urlsplit
@@ -53,20 +58,23 @@ def serve(token):
             # Only serve frontend files, never source, configuration state or a directory listing.
             if path == '/': path = '/index.html'
             allowed = (path in ['/index.html','/admin.html','/dms.html','/portal.html','/profile.html','/server-settings.html','/server.html','/nexchat.svg'] or path.startswith('/assets/'))
-            file = (ROOT / path.lstrip('/')).resolve()
-            if not allowed or not file.is_relative_to(ROOT / 'assets') and file.parent != ROOT or not file.is_file() or 'xhr-transport-polyfill' in path:
+            file = (UI_ROOT / path.lstrip('/')).resolve()
+            if not allowed or not file.is_relative_to(UI_ROOT / 'assets') and file.parent != UI_ROOT or not file.is_file() or 'xhr-transport-polyfill' in path:
                 self.send_error(404); return
-            if config['mode']=='isolated' and path == '/assets/css/theme.css':
+            if config['mode']=='isolated' and path in ('/assets/css/nx-base.css','/assets/css/nx-auth.css'):
                 import re
-                css=file.read_text(encoding='utf-8');css=re.sub(r"@import url\('https://fonts\.googleapis\.com/[^']+'\);", "@import url('/assets/vendor/fonts/fonts.css');",css)
+                css=file.read_text(encoding='utf-8');css=re.sub(r"@import url\('https://fonts\.googleapis\.com/[^']+'\);", "@import url('/assets/vendor/fonts/" + file.name + ".local.css');",css)
                 data=css.encode('utf-8');self.send_response(200);self.send_header('Content-Type','text/css; charset=utf-8');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
             if config['mode']=='isolated' and path == '/assets/js/config.js':
-                data=b'window.NEXCHAT_CONFIG = { STORAGE_ENDPOINT: "", TURN_SERVERS: [] };'; self.send_response(200);self.send_header('Content-Type','application/javascript; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
+                data=b'window.NEXCHAT_CONFIG = { STORAGE_ENDPOINT: "", CLOUDGATE: null, TURN_SERVERS: [] };'; self.send_response(200);self.send_header('Content-Type','application/javascript; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
             if config['mode']=='isolated' and path.endswith('.html'):
                 text=file.read_text(encoding='utf-8')
+                if path == '/index.html' and config.get('login_only'):
+                    text=text.replace('class="segmented"', 'class="segmented login-only"', 1)
+                    text=text.replace('<button id="tabUp"', '<button hidden id="tabUp"', 1)
                 text=text.replace('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css', '/assets/vendor/fontawesome/css/all.min.css')
-                text=text.replace('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>', '')
-                text=text.replace('assets/js/supabase-client.js?v=42','assets/js/local-supabase.js')
+                text=text.replace('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>', '')
+                text=text.replace('assets/js/supabase-client.js?v=513','assets/js/local-supabase.js')
                 # Prevent WebRTC from contacting public STUN/TURN services in this test build.
                 text=text.replace('</head>', '<script>window.RTCPeerConnection=undefined;window.webkitRTCPeerConnection=undefined;</script></head>')
                 data=text.encode('utf-8');self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8');self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob: data:; object-src 'none'; base-uri 'none'");self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
@@ -210,10 +218,10 @@ def main():
     else: progress('Nexen V.%s' % identity.VERSION)
     progress('Mode: %s; data and settings: %s' % (config['mode'], STATE))
     if config['mode']=='isolated':
-        progress('Interface: %s; new accounts: %s.' % ('original UI test (incomplete)' if config.get('original_ui_test') else 'basic local chat', 'disabled' if config.get('login_only') else 'allowed'))
+        progress('Interface: %s; new accounts: %s.' % ('NexChat 3 UI (independent backend incomplete)' if config.get('original_ui_test') else 'basic local chat', 'disabled' if config.get('login_only') else 'allowed'))
         if config.get('original_ui_test'): progress('Warning: the independent original UI backend is incomplete; chat, servers and other features are not yet supported.')
     else:
-        progress('Interface: original NexChat; data uses the configured hosted services.')
+        progress('Interface: NexChat 3; data uses the configured hosted services.')
     if config['mode']=='isolated' and not isolated.owner_exists(STATE):
         progress('No local Owner found. Create the local Owner account.')
         try:
@@ -221,6 +229,9 @@ def main():
             if password != confirm: print('Passwords do not match.',file=sys.stderr); return 1
             isolated.create_owner(STATE,username,password)
         except (ValueError,EOFError,KeyboardInterrupt) as e: print('Owner setup failed: '+str(e),file=sys.stderr); return 1
+    elif config['mode']=='isolated':
+        progress('Existing local Owner found; saved credentials will be reused.')
+        progress('To clear local users and create a new Owner, stop Nexen and run nexen remove usr-list.')
     tmp=STATE/'config.tmp';tmp.write_text(json.dumps(config));os.replace(tmp,STATE/'config.json')
     progress('Settings saved. Starting server on 0.0.0.0:%d...' % PORT)
     # Hex tokens cannot be mistaken for command-line options by argparse.

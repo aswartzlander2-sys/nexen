@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Install the newest published stable Nexen release; no dependencies."""
+"""Install the newest stable Nexen version from a release or main; no dependencies."""
 import ast, io, json, os, re, shutil, socket, stat, sys, tempfile, urllib.request, zipfile
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 API='https://api.github.com/repos/aswartzlander2-sys/nexen/releases'
 
 def request(url,limit):
-    req=urllib.request.Request(url,headers={'Accept':'application/vnd.github+json','User-Agent':'Nexen-Installer/2.1.3'})
+    req=urllib.request.Request(url,headers={'Accept':'application/vnd.github+json','User-Agent':'Nexen-Installer/3.0.2'})
     with urllib.request.urlopen(req,timeout=60) as r: data=r.read(limit+1)
     if len(data)>limit: raise ValueError('Download too large')
     return data
@@ -27,9 +27,20 @@ def main():
     for release in releases:
         tag=release.get('tag_name','');m=re.fullmatch(r'v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)',tag)
         if m and not release.get('draft') and not release.get('prerelease'): choices.append((tuple(map(int,m.groups())),tag))
-    if not choices: raise RuntimeError('No stable Nexen release is published on GitHub yet.')
-    _,tag=max(choices); print('Installing stable release '+tag+'...')
-    data=request('https://github.com/aswartzlander2-sys/nexen/archive/refs/tags/'+quote(tag,safe='')+'.zip',50*1024*1024)
+    commit=json.loads(request('https://api.github.com/repos/aswartzlander2-sys/nexen/git/ref/heads/main',1024*1024)).get('object',{}).get('sha','')
+    if not re.fullmatch(r'[0-9a-f]{40}',commit): raise ValueError('Invalid main commit')
+    version_src=request('https://raw.githubusercontent.com/aswartzlander2-sys/nexen/'+commit+'/identity.py',65536).decode('utf-8')
+    tree=ast.parse(version_src)
+    versions=[n.value.value for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(x,ast.Name) and x.id=='VERSION' for x in n.targets) and isinstance(n.value,ast.Constant) and isinstance(n.value.value,str)]
+    if len(versions)!=1: raise ValueError('Invalid main version')
+    m=re.fullmatch(r'(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)',versions[0])
+    if m: choices.append((tuple(map(int,m.groups())),'v'+versions[0],commit))
+    choices=[(c[0],c[1],None) if len(c)==2 else c for c in choices]
+    if not choices: raise RuntimeError('No stable Nexen version is available.')
+    _,tag,sha=max(choices,key=lambda x:(x[0],x[2] is None))
+    print('Installing stable '+tag+(' from main...' if sha else ' release...'))
+    url=('https://codeload.github.com/aswartzlander2-sys/nexen/zip/'+sha if sha else 'https://github.com/aswartzlander2-sys/nexen/archive/refs/tags/'+quote(tag,safe='')+'.zip')
+    data=request(url,50*1024*1024)
     if os.name=='nt':
         base=Path(os.environ['LOCALAPPDATA'])/'Nexen';target=base/'app';bin_dir=base/'bin'
     else:
@@ -59,6 +70,7 @@ def main():
                 with z.open(e) as src,dest.open('xb') as out: shutil.copyfileobj(src,out)
         for name in ('nexen.py','identity.py','updater.py','isolated.py','index.html','assets/js/config.js','README.md'):
             if not (stage/name).is_file(): raise ValueError('Incomplete release: missing '+name)
+        if tuple(map(int, tag.lstrip('v').split('.'))) >= (3,0,0) and not (stage/'origin-ui/index.html').is_file(): raise ValueError('Incomplete release: missing origin-ui/index.html')
         tree=ast.parse((stage/'identity.py').read_text(encoding='utf-8'))
         values=[n.value.value for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(x,ast.Name) and x.id=='VERSION' for x in n.targets) and isinstance(n.value,ast.Constant)]
         if values != [tag.removeprefix('v')]: raise ValueError('Release tag and bundled version do not match')

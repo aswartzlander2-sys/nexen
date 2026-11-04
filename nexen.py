@@ -67,17 +67,18 @@ def serve(token):
                 data=css.encode('utf-8');self.send_response(200);self.send_header('Content-Type','text/css; charset=utf-8');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
             if config['mode']=='isolated' and path == '/assets/js/config.js':
                 data=b'window.NEXCHAT_CONFIG = { STORAGE_ENDPOINT: "", CLOUDGATE: null, TURN_SERVERS: [] };'; self.send_response(200);self.send_header('Content-Type','application/javascript; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
-            if config['mode']=='isolated' and path.endswith('.html'):
+            if path == '/index.html':
                 text=file.read_text(encoding='utf-8')
-                if path == '/index.html' and config.get('login_only'):
-                    text=text.replace('class="segmented"', 'class="segmented login-only"', 1)
-                    text=text.replace('<button id="tabUp"', '<button hidden id="tabUp"', 1)
-                text=text.replace('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css', '/assets/vendor/fontawesome/css/all.min.css')
-                text=text.replace('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>', '')
-                text=text.replace('assets/js/supabase-client.js?v=513','assets/js/local-supabase.js')
-                # Prevent WebRTC from contacting public STUN/TURN services in this test build.
-                text=text.replace('</head>', '<script>window.RTCPeerConnection=undefined;window.webkitRTCPeerConnection=undefined;</script></head>')
-                data=text.encode('utf-8');self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8');self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob: data:; object-src 'none'; base-uri 'none'");self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
+                text=text.replace('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>', '<script src="/nexen-runtime.js"></script>\n<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>')
+                if config['mode']=='isolated':
+                    text=text.replace('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css', '/assets/vendor/fontawesome/css/all.min.css')
+                    text=text.replace('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>', '')
+                    text=text.replace('assets/js/supabase-client.js?v=513','assets/js/local-supabase.js')
+                    text=text.replace('</head>', '<script>window.RTCPeerConnection=undefined;window.webkitRTCPeerConnection=undefined;</script></head>')
+                text=text.replace('?v=513', '?v=513-nexen-'+identity.VERSION)
+                data=text.encode('utf-8');self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8')
+                if config['mode']=='isolated': self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob: data:; object-src 'none'; base-uri 'none'")
+                self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
             if path == '/assets/js/config.js' and config.get('storage_endpoint'):
                 text = file.read_text(encoding='utf-8').replace("STORAGE_ENDPOINT: '',", 'STORAGE_ENDPOINT: ' + json.dumps(config['storage_endpoint']) + ',')
                 data=text.encode('utf-8'); self.send_response(200); self.send_header('Content-Type','application/javascript; charset=utf-8'); self.send_header('Cache-Control','no-store'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data); return
@@ -103,7 +104,7 @@ def main():
     p=argparse.ArgumentParser(prog='nexen', description='Nexen ' + identity.VERSION)
     sub=p.add_subparsers(dest='cmd', required=True)
     start=sub.add_parser('start'); start.add_argument('--no-contact', action='store_true'); start.add_argument('--connected', action='store_true'); start.add_argument('-L', action='store_true'); start.add_argument('--allow-signup', action='store_true'); start.add_argument('--original-ui-test', action='store_true'); start.add_argument('--basic-ui', action='store_true')
-    sub.add_parser('stop'); update=sub.add_parser('update'); update.add_argument('-B',action='store_true',help='install the latest newer beta preview'); sub.add_parser('id'); sub.add_parser('version'); storage=sub.add_parser('storage-endpoint'); storage.add_argument('url', help='HTTPS signer URL, or off to disable'); rem=sub.add_parser('remove'); rem.add_argument('category', choices=['usr-list','admin-policy','photos','chats','drive-assets','anylist']); rem.add_argument('--yes',action='store_true')
+    sub.add_parser('stop'); update=sub.add_parser('update'); update.add_argument('-B',action='store_true',help='install the latest newer beta or experimental preview'); sub.add_parser('id'); sub.add_parser('version'); storage=sub.add_parser('storage-endpoint'); storage.add_argument('url', help='HTTPS signer URL, or off to disable'); rem=sub.add_parser('remove'); rem.add_argument('category', choices=['usr-list','admin-policy','photos','chats','drive-assets','anylist']); rem.add_argument('--yes',action='store_true')
     worker=sub.add_parser('_serve'); worker.add_argument('token')
     args=p.parse_args()
     if args.cmd == '_serve': return serve(args.token)
@@ -116,7 +117,7 @@ def main():
         if ROOT != updater.install_root().resolve():
             print('Updates are only supported for installer-managed installations. Update this checkout with git instead.',file=sys.stderr); return 1
         try:
-            release=updater.find_update(identity.VERSION,beta=args.B)
+            release=updater.find_best_update(identity.VERSION,beta=args.B)
         except Exception as e:
             print('Could not check GitHub for updates: '+str(e),file=sys.stderr); return 1
         if release is None:
@@ -124,7 +125,7 @@ def main():
             return 0
         r=record()
         if r and request('/__nexen/status',r.get('token','')):
-            print('Update %s is available. Stop Nexen before installing it.' % release,file=sys.stderr); return 1
+            print('Update %s is available. Stop Nexen before installing it.' % release['version'],file=sys.stderr); return 1
         import socket
         try:
             with socket.create_connection(('127.0.0.1',PORT),timeout=1):
@@ -134,10 +135,10 @@ def main():
         if ident == ROOT or ROOT in ident.parents:
             print('Identity file is inside the application directory; move it before updating.',file=sys.stderr); return 1
         try:
-            progress('Update available: %s. Downloading from GitHub...' % release)
-            archive=updater.download(release)
+            progress('Update available: %s. Downloading from GitHub...' % release['version'])
+            archive=updater.download_candidate(release)
             progress('Download complete; validating archive and replacing application files...')
-            updater.apply_archive(archive,ROOT,STATE,expected_version=release)
+            updater.apply_archive(archive,ROOT,STATE,expected_version=release['version'])
         except Exception as e:
             print('Update failed; your existing installation and data should be unchanged: '+str(e),file=sys.stderr); return 1
         progress('Update complete; local data and settings were preserved.')

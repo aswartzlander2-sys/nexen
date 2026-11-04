@@ -1,4 +1,4 @@
-# Nexen 3.0.1
+# Nexen 3.0.2
 
 Nexen has two **separate** modes:
 
@@ -9,7 +9,7 @@ Nexen has two **separate** modes:
 
 ## Install
 
-Requires Python 3.9+ and curl (Windows also requires PowerShell). Push the installer files to `main` and publish at least one stable GitHub Release first; the repository currently has no published releases. The installers choose the newest published stable tag, never a B or E build. Review scripts before running them; the bootstrap is downloaded from `main` and the application from the selected release tag.
+Requires Python 3.9+ and curl (Windows also requires PowerShell). Push the complete package to `main`. The installer chooses the newest stable version from published releases or a numeric version on main, never a B or E build. Review scripts before running them; the bootstrap is downloaded from `main` and the application from the selected release tag or pinned main commit.
 
 Linux:
 ```sh
@@ -42,7 +42,7 @@ Independent accounts, chat and uploads live in `~/.nexen` (or the directory spec
 ## Version and installation ID
 
 ```sh
-nexen version   # Nexen V.3.0.1
+nexen version   # Nexen V.3.0.2
 nexen id        # six-digit ID, including any leading zeros
 ```
 
@@ -74,15 +74,15 @@ The independent UI restricts browser resource requests to the local origin and d
 For an installer-managed installation:
 
 ```sh
-nexen update       # newest newer stable GitHub Release; never B or E
-nexen update -B    # newest newer B feature-preview release; never E
+nexen update       # newest newer stable release or numeric version on main; never B or E
+nexen update -B    # newest newer B or E preview release or experimental branch
 ```
 
-A check may run while Nexen is running. If an update is available, stop Nexen before installing it, then run the update command again. If no matching newer version exists, the CLI prints the corresponding no-updates message. A network or API error is reported as an error instead. Both commands require internet access—even if you use `--no-contact`—and preserve the local data and ID. Beta is opt-in per command; a future stable bug-fix release is available via normal `nexen update`, including to someone running an older beta. The updater does not downgrade a newer installed version.
+A check may run while Nexen is running. If an update is available, stop Nexen before installing it, then run the update command again. If no matching newer version exists, the CLI prints the corresponding no-updates message. A network or API error is reported as an error instead. Both commands require internet access—even if you use `--no-contact`—and preserve the local data and ID. Beta and experimental versions are opt-in per command; a future stable bug-fix release is available via normal `nexen update`, including to someone running an older beta. The updater does not downgrade a newer installed version.
 
-Releases must be published on GitHub: stable tags follow `v3.0.1`, and beta preview tags follow `v3.1.0B`. E builds such as `v3.1.0E` are development builds and are excluded from both update channels. Merely pushing a branch or creating a tag is not enough: create a GitHub Release for it. See `RELEASING.md`. Current public repository releases were empty when this package was prepared, so the installers and updates cannot offer this version until a stable release is actually published. No releases have been published by this package.
+Stable updates check published stable releases and the numeric version on `main`, choosing the newer. Preview updates (`-B`) check B and E releases and the `experimental` branch when present; they never install a preview without `-B`. Branch downloads are pinned to the commit whose version was checked. Network or malformed-version errors are reported, not treated as “no updates.” A tag or commit must contain the complete application. Older installed versions check releases only: to receive this updater, publish a stable GitHub Release or rerun the installer after pushing this package to main. See `RELEASING.md`.
 
-Updates download release-tag source archives over HTTPS and validate the archive structure and bundled version, but are not cryptographically signed. Updates are only supported on installer-managed installations. For a Git checkout use Git. `apt update` and `apt upgrade` cannot update Nexen without a published signed APT repository.
+Updates download release-tag or pinned-commit source archives over HTTPS and validate the archive structure and bundled version, but are not cryptographically signed. Updates are only supported on installer-managed installations. For a Git checkout use Git. `apt update` and `apt upgrade` cannot update Nexen without a published signed APT repository.
 
 ## Connected-mode uploaded wallpapers
 

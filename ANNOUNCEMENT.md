@@ -1,4 +1,4 @@
-# Introducing Nexen 3.0.1
+# Introducing Nexen 3.0.2
 
 Want to run NexChat from your own computer? **Nexen** is a command-line launcher with two ways to get started:
 
@@ -9,7 +9,7 @@ The independent original-UI backend is incomplete: its login and home shell work
 
 ## Install Nexen
 
-You'll need **Python 3.9 or newer**. Run the command for your system after a stable GitHub Release has been published.
+You'll need **Python 3.9 or newer**. Run the command for your system after the complete package has been pushed to main or a stable GitHub Release has been published.
 
 **Linux**
 ```sh

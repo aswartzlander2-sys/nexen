@@ -1,3 +1,9 @@
+# Nexen 3.0.2
+
+- Serve the NexChat 3 Origin SPA at the launcher root; the repository root now opens that UI rather than the older sign-in page.
+- Stable update checks both numeric versions on main and stable releases; opt-in `-B` checks B/E preview releases and the experimental branch. Branch archives are pinned to the checked commit and errors do not claim there is no update.
+- Older installed updaters still require a published release, or a one-time reinstall using the updated installer. Independent mode remains incomplete.
+
 # Nexen 3.0.1
 
 - Restore Liquid Glass and loading saved uploaded backgrounds through the configured storage signer. Glass uses a built-in fallback when the signer is unavailable.

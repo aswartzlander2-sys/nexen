@@ -19,12 +19,12 @@ class ReleaseChannelTests(unittest.TestCase):
         data=[{'tag_name':'v2.3.0E'}, {'tag_name':'v2.2.0B','prerelease':True}, {'tag_name':'v2.9.0','draft':True}, {'tag_name':'v2.1.2','prerelease':False}]
         with patch('urllib.request.urlopen',side_effect=releases(data)):
             self.assertEqual(updater.find_update('2.1.1'), 'v2.1.2')
-            self.assertEqual(updater.find_update('2.1.1',beta=True), 'v2.2.0B')
+            self.assertEqual(updater.find_update('2.1.1',beta=True), 'v2.3.0E')
     def test_no_updates_and_invalid_or_older_tags(self):
         data=[{'tag_name':'v9.0.0E'},{'tag_name':'v2.1.0B'},{'tag_name':'nonsense'}, {'tag_name':'v2.1.1'}]
         with patch('urllib.request.urlopen',side_effect=releases(data)):
             self.assertIsNone(updater.find_update('2.1.1'))
-            self.assertIsNone(updater.find_update('2.1.1',beta=True))
+            self.assertEqual(updater.find_update('2.1.1',beta=True), 'v9.0.0E')
     def test_bugfix_stable_available_to_beta_install(self):
         data=[{'tag_name':'v2.1.2','prerelease':False}]
         with patch('urllib.request.urlopen',side_effect=releases(data)):

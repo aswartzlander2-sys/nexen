@@ -14,7 +14,11 @@ class InstallerTests(unittest.TestCase):
                 for name in ['nexen.py','updater.py','isolated.py','identity.py','index.html','assets/js/config.js','README.md']:
                     z.writestr('nexen-2.1.1/'+name, "VERSION='2.1.1'" if name=='identity.py' else 'pass')
             releases=[{'tag_name':'v2.1.1','prerelease':False}, {'tag_name':'v9.0.0B','prerelease':True}, {'tag_name':'v9.0.0E','prerelease':True}]
-            def fake(url,limit): return json.dumps(releases).encode() if 'api.github.com' in url else archive.getvalue()
+            def fake(url,limit):
+                if '/git/ref/heads/main' in url: return json.dumps({'object':{'sha':'a'*40}}).encode()
+                if 'identity.py' in url: return b"VERSION='2.1.1'"
+                if 'api.github.com' in url: return json.dumps(releases).encode()
+                return archive.getvalue()
             with patch.dict(os.environ,{'HOME':d}), patch('install.request',side_effect=fake), patch('socket.create_connection',side_effect=ConnectionRefusedError()): install.main()
             self.assertTrue((home/'.local/share/nexen/nexen.py').exists())
             self.assertEqual((home/'.nexen-identity').read_text(),'001234')

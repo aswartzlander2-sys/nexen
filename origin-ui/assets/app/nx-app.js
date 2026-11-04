@@ -159,7 +159,7 @@
             <button class="nxa-go btn">Create my account</button>
           </form>
         </div>
-        <p class="nxa-foot">a hobby project · be nice ✌️ · Nexen V.${esc(window.NEXEN_META?.version || '3.0.1')}${window.NEXEN_META?.id ? ' · ID: ' + esc(window.NEXEN_META.id) : ''}</p>
+        <p class="nxa-foot">a hobby project · be nice ✌️ · Nexen V.${esc(window.NEXEN_META?.version || '3.0.2')}${window.NEXEN_META?.id ? ' · ID: ' + esc(window.NEXEN_META.id) : ''}</p>
       </div></main></div>`);
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     // chat bubbles drifting up behind the card (some start mid-flight so the sky isn't empty)

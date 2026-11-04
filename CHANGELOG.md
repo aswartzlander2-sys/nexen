@@ -1,3 +1,7 @@
+# Nexen 2.1.2
+
+- Version updated to 2.1.2. The full release package includes the original NexChat CSS, JavaScript, and other UI assets.
+
 # Nexen 2.1.1
 
 - Show the six-digit ID only in independent mode; retain it across updates and make it available via `nexen id`.

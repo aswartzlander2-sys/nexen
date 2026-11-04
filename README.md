@@ -1,4 +1,4 @@
-# Nexen 2.1.1
+# Nexen 2.1.2
 
 Nexen has two **separate** modes:
 
@@ -38,7 +38,7 @@ Independent accounts, chat and uploads live in `~/.nexen` (or the directory spec
 ## Version and installation ID
 
 ```sh
-nexen version   # Nexen V.2.1.1
+nexen version   # Nexen V.2.1.2
 nexen id        # six-digit ID, including any leading zeros
 ```
 
@@ -76,7 +76,7 @@ nexen update -B    # newest newer B feature-preview release; never E
 
 A check may run while Nexen is running. If an update is available, stop Nexen before installing it, then run the update command again. If no matching newer version exists, the CLI prints the corresponding no-updates message. A network or API error is reported as an error instead. Both commands require internet access—even if you use `--no-contact`—and preserve the local data and ID. Beta is opt-in per command; a future stable bug-fix release is available via normal `nexen update`, including to someone running an older beta. The updater does not downgrade a newer installed version.
 
-Releases must be published on GitHub: stable tags follow `v2.1.1`, and beta preview tags follow `v2.2.0B`. E builds such as `v2.2.0E` are development builds and are excluded from both update channels. Merely pushing a branch or creating a tag is not enough: create a GitHub Release for it. See `RELEASING.md`. Current public repository releases were empty when this package was prepared, so the installers and updates cannot offer this version until a stable release is actually published. No releases have been published by this package.
+Releases must be published on GitHub: stable tags follow `v2.1.2`, and beta preview tags follow `v2.2.0B`. E builds such as `v2.2.0E` are development builds and are excluded from both update channels. Merely pushing a branch or creating a tag is not enough: create a GitHub Release for it. See `RELEASING.md`. Current public repository releases were empty when this package was prepared, so the installers and updates cannot offer this version until a stable release is actually published. No releases have been published by this package.
 
 Updates download release-tag source archives over HTTPS and validate the archive structure and bundled version, but are not cryptographically signed. Updates are only supported on installer-managed installations. For a Git checkout use Git. `apt update` and `apt upgrade` cannot update Nexen without a published signed APT repository.
 

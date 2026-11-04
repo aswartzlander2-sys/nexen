@@ -22,7 +22,7 @@ def find_update(current, beta=False):
     if cur is None: raise ValueError('Unrecognised installed version: '+current)
     releases=[]
     for page in range(1,11):
-        req=urllib.request.Request(RELEASES_URL+'?per_page=100&page='+str(page),headers={'Accept':'application/vnd.github+json','User-Agent':'Nexen-Updater/2.1.1'})
+        req=urllib.request.Request(RELEASES_URL+'?per_page=100&page='+str(page),headers={'Accept':'application/vnd.github+json','User-Agent':'Nexen-Updater/2.1.2'})
         with urllib.request.urlopen(req,timeout=30) as r:
             raw=r.read(5*1024*1024+1)
         if len(raw)>5*1024*1024: raise ValueError('GitHub release listing is too large')
@@ -53,7 +53,7 @@ def install_root():
 
 def download(tag):
     if version_key(tag) is None: raise ValueError('Invalid release tag')
-    request=urllib.request.Request(ARCHIVE_URL+quote(tag,safe='')+'.zip',headers={'User-Agent':'Nexen-Updater/2.1.1'})
+    request=urllib.request.Request(ARCHIVE_URL+quote(tag,safe='')+'.zip',headers={'User-Agent':'Nexen-Updater/2.1.2'})
     with urllib.request.urlopen(request,timeout=60) as response:
         data=response.read(MAX_DOWNLOAD+1)
     if len(data)>MAX_DOWNLOAD: raise ValueError('Download exceeds 50 MB')

@@ -5,7 +5,7 @@ from pathlib import Path, PurePosixPath
 URL='https://github.com/aswartzlander2-sys/nexen/archive/refs/heads/main.zip'
 MAX_DOWNLOAD=50 * 1024 * 1024
 MAX_UNPACKED=150 * 1024 * 1024
-REQUIRED=('nexen.py','isolated.py','updater.py','index.html','assets/js/config.js','README.md')
+REQUIRED=('nexen.py','isolated.py','updater.py','identity.py','index.html','assets/js/config.js','README.md')
 
 def install_root():
     if os.name == 'nt':
@@ -15,7 +15,7 @@ def install_root():
     return Path.home()/'.local'/'share'/'nexen'
 
 def download():
-    request=urllib.request.Request(URL,headers={'User-Agent':'Nexen-Updater/1.0'})
+    request=urllib.request.Request(URL,headers={'User-Agent':'Nexen-Updater/2.00'})
     with urllib.request.urlopen(request,timeout=60) as response:
         data=response.read(MAX_DOWNLOAD+1)
     if len(data)>MAX_DOWNLOAD: raise ValueError('Download exceeds 50 MB')
@@ -45,7 +45,7 @@ def apply_archive(data,target,state):
                 if os.name!='nt' and entry.external_attr >> 16 & 0o111: out.chmod(0o755)
         for item in REQUIRED:
             if not (staged/item).is_file(): raise ValueError('Update is incomplete: missing '+item)
-        for item in ('nexen.py','isolated.py','updater.py'):
+        for item in ('nexen.py','isolated.py','updater.py','identity.py'):
             ast.parse((staged/item).read_text(encoding='utf-8'),filename=item)
         # Keep rollback outside the temporary directory so a failed restore is
         # never removed by TemporaryDirectory cleanup.

@@ -3,6 +3,7 @@
 import argparse, getpass, hmac, http.server, json, os, pathlib, secrets, subprocess, sys, threading, time, urllib.request
 import isolated
 import updater
+import identity
 ROOT = pathlib.Path(__file__).resolve().parent
 STATE = pathlib.Path(os.environ.get('NEXEN_STATE_DIR', pathlib.Path.home() / '.nexen'))
 PORT = 63936
@@ -41,6 +42,10 @@ def serve(token):
             self.send_response(200); self.end_headers(); self.wfile.write(b'ok')
             if self.path.endswith('/stop'): threading.Thread(target=self.server.shutdown, daemon=True).start()
         def do_GET(self):
+            from urllib.parse import urlsplit
+            if urlsplit(self.path).path == '/__nexen/meta':
+                data=json.dumps({'version':identity.VERSION,'id':identity.get_id()}).encode('utf-8')
+                self.send_response(200);self.send_header('Content-Type','application/json; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
             if config['mode'] == 'isolated' and not config.get('original_ui_test'): return isolated.handle(self, STATE, config.get('login_only',False))
             if config['mode'] == 'isolated' and self.path.startswith('/api/'): return isolated.handle(self, STATE, config.get('login_only',False))
             from urllib.parse import unquote, urlsplit
@@ -87,13 +92,18 @@ def serve(token):
     return 0
 
 def main():
-    p=argparse.ArgumentParser(prog='nexen', description='Nexen 1.0.0')
+    p=argparse.ArgumentParser(prog='nexen', description='Nexen ' + identity.VERSION)
     sub=p.add_subparsers(dest='cmd', required=True)
     start=sub.add_parser('start'); start.add_argument('--no-contact', action='store_true'); start.add_argument('--connected', action='store_true'); start.add_argument('-L', action='store_true'); start.add_argument('--allow-signup', action='store_true'); start.add_argument('--original-ui-test', action='store_true'); start.add_argument('--basic-ui', action='store_true')
-    sub.add_parser('stop'); sub.add_parser('update'); storage=sub.add_parser('storage-endpoint'); storage.add_argument('url', help='HTTPS signer URL, or off to disable'); rem=sub.add_parser('remove'); rem.add_argument('category', choices=['usr-list','admin-policy','photos','chats','drive-assets','anylist']); rem.add_argument('--yes',action='store_true')
+    sub.add_parser('stop'); sub.add_parser('update'); sub.add_parser('id'); sub.add_parser('version'); storage=sub.add_parser('storage-endpoint'); storage.add_argument('url', help='HTTPS signer URL, or off to disable'); rem=sub.add_parser('remove'); rem.add_argument('category', choices=['usr-list','admin-policy','photos','chats','drive-assets','anylist']); rem.add_argument('--yes',action='store_true')
     worker=sub.add_parser('_serve'); worker.add_argument('token')
     args=p.parse_args()
     if args.cmd == '_serve': return serve(args.token)
+    if args.cmd == 'version':
+        print('Nexen V.'+identity.VERSION); return 0
+    if args.cmd == 'id':
+        try: print(identity.get_id()); return 0
+        except (OSError,ValueError) as e: print('Could not read or create Nexen ID: '+str(e),file=sys.stderr); return 1
     if args.cmd == 'update':
         progress('Checking installation and server status...')
         if ROOT != updater.install_root().resolve():
@@ -177,6 +187,9 @@ def main():
         print('The original-UI local test requires --no-contact.',file=sys.stderr); return 1
     if config['mode']=='connected' and config['login_only']:
         print('Login-only mode cannot be enforced against the hosted backend. Use --no-contact or --allow-signup.',file=sys.stderr); return 1
+    try: machine_id=identity.get_id()
+    except (OSError,ValueError) as e: print('Could not read or create Nexen ID: '+str(e),file=sys.stderr); return 1
+    progress('Nexen V.%s • %s' % (identity.VERSION,machine_id))
     progress('Mode: %s; data and settings: %s' % (config['mode'], STATE))
     if config['mode']=='isolated':
         progress('Interface: %s; new accounts: %s.' % ('original UI test (incomplete)' if config.get('original_ui_test') else 'basic local chat', 'disabled' if config.get('login_only') else 'allowed'))

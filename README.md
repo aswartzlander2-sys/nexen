@@ -1,4 +1,4 @@
-# Nexen 1.0.0
+# Nexen 2.00
 
 Nexen has two **separate** modes:
 
@@ -34,6 +34,17 @@ nexen stop
 Open `http://localhost:63936` or `http://<host-LAN-IP>:63936`. The server binds `0.0.0.0`. Only one instance can bind the port. Stop the server before changing settings. Mode and login-only settings persist across restarts; `nexen start` uses the previous settings. Use `nexen start --allow-signup` to re-enable signup or `nexen start --connected --allow-signup` to return to connected mode. `-L` is enforced by the independent server; it cannot be enforced against the hosted backend and is rejected in connected mode.
 
 Independent accounts, chat and uploads live in `~/.nexen` (or the directory specified by `NEXEN_STATE_DIR`); backing up that directory while stopped preserves them. Connected-mode data stays on the original services. Settings and data are not migrated between modes. Linux sets the server process name to `NexChats Nexen`; other OSes may show Python instead.
+
+## Version and installation ID
+
+```sh
+nexen version   # Nexen V.2.00
+nexen id        # six-digit ID, including any leading zeros
+```
+
+The first `nexen id` or `nexen start` generates a random ID and stores it in `~/.nexen-identity`, separately from the program and `~/.nexen` data. It survives stopping, normal application removal/reinstallation, updates, and `nexen remove anylist`, provided this identity file is retained. Keep a backup if you need to preserve it through operating-system reinstall, profile deletion or disk replacement. If the file is deleted, a new ID is generated. The ID is not a secret; it is displayed to anyone who can access the Nexen UI.
+
+The identifier is per OS user account, not guaranteed to be shared by different users on the same computer. It is randomly chosen from one million possibilities, so two installations can occasionally get the same ID; six digits cannot guarantee global uniqueness. If `NEXEN_IDENTITY_FILE` is set, that path is used instead, and must also be retained.
 
 ## Experimental original-UI test (incomplete)
 

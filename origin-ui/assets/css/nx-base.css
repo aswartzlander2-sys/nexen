@@ -224,7 +224,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 }
 .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .av .av-photo { position: absolute; inset: 0; opacity: 0; }
-.av .av-photo.is-loaded { opacity: 1; }
+.av.has-photo { background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; }
+.av.has-photo .av-initial { visibility: hidden; }
 .av-slot { position: relative; display: inline-flex; flex-shrink: 0; }
 .av-slot > .pdot { position: absolute; right: -2px; bottom: -2px; z-index: 3; }
 .pdot { width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid var(--pdot-ring, var(--bg-1)); background: var(--txt-4); flex-shrink: 0; box-sizing: content-box; }

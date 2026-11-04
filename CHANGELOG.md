@@ -1,3 +1,14 @@
+# Nexen 3.1.6
+
+- Flush browser HTTP cache when the app version changes, prevent stale cached assets and reload open tabs after a newer server starts. Cookies, browser storage, local accounts and the Nexen ID are not cleared.
+- Show loaded avatar pictures as backgrounds so an invisible image loader cannot draw a broken-image icon over the picture.
+
+# Nexen 3.1.5
+
+- Restore the Owner role to the oldest existing local user if a legacy database contains users but no Owner; retain existing Owners unchanged. `nexen owner` displays the saved local Owner.
+- Allow `nexen remove anylist` and other local removal commands when stopped, regardless of the last selected mode. `anylist` warns that it deletes local users, chats, files, and policies.
+- Keep `start-isolated` as the primary command; the old `--no-contact` spelling remains a hidden compatibility alias.
+
 # Nexen 3.1.4
 
 - Hide avatar decorations until their image successfully loads, and hide them after an error, avoiding broken-image icons on top of working photos.

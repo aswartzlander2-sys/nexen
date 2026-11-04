@@ -257,7 +257,7 @@
     // images never show the browser's broken-image icon; a valid image covers
     // the initial as soon as it loads.
     const inner = usableImg(p.avatar_url)
-      ? `<span class="av" style="width:${size}px;height:${size}px;font-size:${fs}px;background:${tint(p)}"><span class="av-initial">${esc(initial(nameOf(p)))}</span><img class="av-photo" ${imgAttr(p.avatar_url)} alt=""${o.eager ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async" onload="this.classList.add('is-loaded')" onerror="this.classList.remove('is-loaded')"></span>`
+      ? `<span class="av" style="width:${size}px;height:${size}px;font-size:${fs}px;background:${tint(p)}"><span class="av-initial">${esc(initial(nameOf(p)))}</span><img class="av-photo" ${imgAttr(p.avatar_url)} alt=""${o.eager ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async" onload="this.classList.add('is-loaded');this.parentElement.style.backgroundImage='url('+JSON.stringify(this.currentSrc||this.src)+')';this.parentElement.classList.add('has-photo')" onerror="this.classList.remove('is-loaded');this.parentElement.classList.remove('has-photo');this.parentElement.style.removeProperty('background-image')"></span>`
       : `<span class="av" style="width:${size}px;height:${size}px;font-size:${fs}px;background:${tint(p)}">${esc(initial(nameOf(p)))}</span>`;
     const deco = o.deco !== false && size >= 24 ? decoPath(p, 'pfp') : null;
     let out = deco ? `<span class="av-decoed">${inner}${decoImg(deco, 'av-deco', o.still)}</span>` : inner;

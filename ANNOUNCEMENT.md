@@ -1,4 +1,4 @@
-# Introducing Nexen 3.1.4
+# Introducing Nexen 3.1.6
 
 Want to run NexChat from your own computer? **Nexen** is a command-line launcher with two ways to get started:
 

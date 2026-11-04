@@ -35,6 +35,25 @@ def create_owner(state, username, password):
 def owner_exists(state):
     with dbopen(state) as c: return bool(c.execute('SELECT 1 FROM users WHERE owner=1').fetchone())
 
+def owner_name(state):
+    with dbopen(state) as c:
+        row=c.execute('SELECT username FROM users WHERE owner=1 ORDER BY id LIMIT 1').fetchone()
+        return row['username'] if row else None
+
+def restore_missing_owner(state):
+    """If legacy users exist but no Owner, promote the earliest local account.
+
+    Existing Owners and password hashes are never changed. Return the promoted
+    username, or None when no promotion is needed or there are no users.
+    """
+    with dbopen(state) as c:
+        c.execute('BEGIN IMMEDIATE')
+        if c.execute('SELECT 1 FROM users WHERE owner=1').fetchone(): return None
+        row=c.execute('SELECT id,username FROM users ORDER BY id LIMIT 1').fetchone()
+        if not row: return None
+        c.execute('UPDATE users SET owner=1 WHERE id=?', (row['id'],))
+        return row['username']
+
 def remove(state,category):
     with dbopen(state) as c:
         if category in ('usr-list','anylist'):

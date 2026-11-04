@@ -2,7 +2,7 @@
 import os, secrets, time
 from pathlib import Path
 
-VERSION='3.1.4'
+VERSION='3.1.6'
 
 def identity_path():
     # Deliberately outside application and ordinary data directories so a

@@ -42,3 +42,23 @@ class BrowserScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
 
 if __name__ == '__main__': unittest.main()
+
+class OwnerRecoveryTests(unittest.TestCase):
+    def test_legacy_without_owner_promotes_first_without_changing_passwords(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state=Path(tmp)
+            with isolated.dbopen(state) as c:
+                c.execute("INSERT INTO users(username,salt,hash,owner) VALUES ('first', ?, ?, 0)",('00'*16,'hash1'))
+                c.execute("INSERT INTO users(username,salt,hash,owner) VALUES ('second', ?, ?, 0)",('01'*16,'hash2'))
+            self.assertEqual(isolated.restore_missing_owner(state),'first')
+            self.assertEqual(isolated.owner_name(state),'first')
+            self.assertIsNone(isolated.restore_missing_owner(state))
+            with isolated.dbopen(state) as c:
+                rows=c.execute('SELECT username,hash,owner FROM users ORDER BY id').fetchall()
+                self.assertEqual([tuple(r) for r in rows],[('first','hash1',1),('second','hash2',0)])
+    def test_existing_owner_is_never_reassigned(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state=Path(tmp); isolated.create_owner(state,'chosen_owner','password123')
+            with isolated.dbopen(state) as c:c.execute("INSERT INTO users(username,salt,hash,owner) VALUES ('another', ?, ?, 0)",('01'*16,'x'))
+            self.assertIsNone(isolated.restore_missing_owner(state))
+            self.assertEqual(isolated.owner_name(state),'chosen_owner')

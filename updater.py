@@ -21,7 +21,7 @@ def find_update(current, beta=False):
     if cur is None: raise ValueError('Unrecognised installed version: '+current)
     releases=[]
     for page in range(1,11):
-        req=urllib.request.Request(RELEASES_URL+'?per_page=100&page='+str(page),headers={'Accept':'application/vnd.github+json','User-Agent':'Nexen-Updater/3.1.4'})
+        req=urllib.request.Request(RELEASES_URL+'?per_page=100&page='+str(page),headers={'Accept':'application/vnd.github+json','User-Agent':'Nexen-Updater/3.1.6'})
         with urllib.request.urlopen(req,timeout=30) as r:
             raw=r.read(5*1024*1024+1)
         if len(raw)>5*1024*1024: raise ValueError('GitHub release listing is too large')
@@ -45,7 +45,7 @@ def find_update(current, beta=False):
 
 def branch_candidate(branch, beta=False):
     """Pin the branch to its commit; read the version at that same commit."""
-    req=urllib.request.Request('https://api.github.com/repos/aswartzlander2-sys/nexen/git/ref/heads/'+branch,headers={'Accept':'application/vnd.github+json','User-Agent':'Nexen-Updater/3.1.4'})
+    req=urllib.request.Request('https://api.github.com/repos/aswartzlander2-sys/nexen/git/ref/heads/'+branch,headers={'Accept':'application/vnd.github+json','User-Agent':'Nexen-Updater/3.1.6'})
     try:
         with urllib.request.urlopen(req,timeout=30) as r: raw=r.read(1024*1024+1)
     except urllib.error.HTTPError as e:
@@ -54,7 +54,7 @@ def branch_candidate(branch, beta=False):
     if len(raw)>1024*1024: raise ValueError('Commit response is too large')
     sha=json.loads(raw).get('object',{}).get('sha','')
     if not re.fullmatch(r'[0-9a-f]{40}',sha): raise ValueError('Invalid branch commit')
-    req=urllib.request.Request('https://raw.githubusercontent.com/aswartzlander2-sys/nexen/'+sha+'/identity.py',headers={'User-Agent':'Nexen-Updater/3.1.4'})
+    req=urllib.request.Request('https://raw.githubusercontent.com/aswartzlander2-sys/nexen/'+sha+'/identity.py',headers={'User-Agent':'Nexen-Updater/3.1.6'})
     with urllib.request.urlopen(req,timeout=30) as r: source=r.read(65537)
     if len(source)>65536: raise ValueError('Version file is too large')
     tree=ast.parse(source.decode('utf-8'))
@@ -75,7 +75,7 @@ def download_candidate(candidate):
     if not candidate['sha']: return download(candidate['version'])
     sha=candidate['sha']
     if not re.fullmatch(r'[0-9a-f]{40}',sha): raise ValueError('Invalid commit')
-    req=urllib.request.Request('https://codeload.github.com/aswartzlander2-sys/nexen/zip/'+sha,headers={'User-Agent':'Nexen-Updater/3.1.4'})
+    req=urllib.request.Request('https://codeload.github.com/aswartzlander2-sys/nexen/zip/'+sha,headers={'User-Agent':'Nexen-Updater/3.1.6'})
     with urllib.request.urlopen(req,timeout=60) as r: data=r.read(MAX_DOWNLOAD+1)
     if len(data)>MAX_DOWNLOAD: raise ValueError('Download exceeds 50 MB')
     return data
@@ -89,7 +89,7 @@ def install_root():
 
 def download(tag):
     if version_key(tag) is None: raise ValueError('Invalid release tag')
-    request=urllib.request.Request(ARCHIVE_URL+quote(tag,safe='')+'.zip',headers={'User-Agent':'Nexen-Updater/3.1.4'})
+    request=urllib.request.Request(ARCHIVE_URL+quote(tag,safe='')+'.zip',headers={'User-Agent':'Nexen-Updater/3.1.6'})
     with urllib.request.urlopen(request,timeout=60) as response:
         data=response.read(MAX_DOWNLOAD+1)
     if len(data)>MAX_DOWNLOAD: raise ValueError('Download exceeds 50 MB')

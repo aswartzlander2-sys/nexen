@@ -14,7 +14,7 @@ class CommandTests(unittest.TestCase):
  def test_stable_none(self):
   rc,out,err,d,a,install=self.run_command([],None);self.assertEqual(out.strip(),'There are no updates available at this time.');self.assertEqual(d,0)
  def test_preview_none(self):
-  rc,out,err,d,a,install=self.run_command(['-B'],None);self.assertEqual(out.strip(),'There are no updates or feature previews available at this time.');self.assertEqual(d,0)
+  rc,out,err,d,a,install=self.run_command(['-B'],None);self.assertEqual(out.strip(),'There are no updates available at this time.');self.assertEqual(d,0)
  def test_available_installs_in_both_modes(self):
   for args in ([],['-B']):
    rc,out,err,d,a,install=self.run_command(args,{'version':'v4.0.0','sha':None});self.assertEqual((rc,d,a,install),(0,1,1,0) if args else (0,0,0,1));self.assertNotIn('There are no updates',out)

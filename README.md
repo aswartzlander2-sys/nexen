@@ -1,4 +1,4 @@
-# Nexen 3.1.4
+# Nexen 3.1.6
 
 The NexChat Origin v3 SPA is the root interface, including the home, chat, server, and settings views. Legacy page links open the same SPA.
 
@@ -38,7 +38,7 @@ nexen stop
 ```
 Open `http://localhost:63936` or `http://<host-LAN-IP>:63936`. The server binds `0.0.0.0`. Only one instance can bind the port. Stop the server before changing settings. A plain `nexen start` always selects connected mode, even after an independent session; to use independent mode again, specify `start-isolated`. Signups are enabled by default on each independent start, even if a previous session used `-L`. Independent data is kept when switching modes. `-L` is enforced by the independent server; it cannot be enforced against the hosted backend and is rejected in connected mode.
 
-On the first `nexen start-isolated`, Nexen prompts for an Owner username and password. It stores the username and a salted password hash in the local database and identifies this account as Owner in the interface; the same Owner is reused on subsequent independent starts, so the prompt does not repeat. The CLI reports when an existing Owner is reused. To remove **all local users**, including the Owner, stop an independent session and run `nexen remove usr-list`; the next independent start prompts for a new Owner. This also signs out local users. It does not remove chats or files, and `nexen remove anylist` also clears users. Back up the data directory before removing anything.
+On the first `nexen start-isolated`, Nexen prompts for an Owner username and password. It stores the username and a salted password hash in the local database and identifies this account as Owner in the interface; the same Owner is reused on subsequent independent starts, so the prompt does not repeat. The CLI reports when an existing Owner is reused. Run `nexen owner` to see which local account is the Owner. If an older local database has users but no Owner, the earliest existing user is promoted on the next isolated start without changing passwords. To remove **all local users**, including the Owner, stop the server and run `nexen remove usr-list`; the next independent start prompts for a new Owner. This also signs out local users. It does not remove chats or files, and `nexen remove anylist` also clears users. Back up the data directory before removing anything.
 
 When `-L` is active, account creation is refused by the local server, and Sign in fills the whole tab control. The setting applies only to that session; the next ordinary `nexen start-isolated` allows signup.
 
@@ -47,7 +47,7 @@ Independent accounts, chat and uploads live in `~/.nexen` (or the directory spec
 ## Version and installation ID
 
 ```sh
-nexen version   # Nexen V.3.1.4
+nexen version   # Nexen V.3.1.6
 nexen id        # six-digit ID, including any leading zeros
 ```
 
@@ -109,7 +109,7 @@ The URL is stored outside the application directory and survives `nexen update`.
 
 ## Remove independent-mode data
 
-Stop Nexen first. Each command prompts for `YES`; add `--yes` to skip the prompt. These commands do not touch the hosted database.
+Stop Nexen first. Each command prompts for `YES`; add `--yes` to skip the prompt. These commands only touch independent local data, even if the last session was connected. `anylist` permanently deletes local users (including Owner), sessions, chats, files, and policies. These commands do not touch the hosted database.
 
 ```sh
 nexen remove usr-list      # removes local users and sessions, including Owner
@@ -130,3 +130,6 @@ The original repository documentation identifies exposed iDrive credentials in i
 Run `python -m unittest discover -s tests -v` from the repository. Node.js, if installed, is used for an additional embedded JavaScript syntax check. Browser smoke tests covered the basic independent login, chat, upload, reload and logout flows and checked that they made no external requests. The connected login page and hosted authentication endpoint were smoke-tested without a real user account; connected-mode authenticated workflows, the real connected storage signer, Windows installation and all browser/OS combinations have not been verified.
 
 Network outages, firewall rules, unavailable third-party services, and misconfigured storage can still prevent requests from completing; no software can guarantee that fetches never fail. The UI now reports connection errors with guidance. Verify the Nexen process is running and the device can reach port 63936. In connected mode, the browser also needs access to the Supabase project and its CDN. Never expose a database service-role key in the frontend.
+
+### Browser cache on update
+Starting with v3.1.6, Nexen sends no-store headers for its UI and requests a browser HTTP-cache flush when the version changes. Open v3.1.6+ tabs check for newer versions and reload when visible; after installing v3.1.6 from an older version, reload the page once. Browsers generally honor Clear-Site-Data only on secure origins (HTTPS or localhost); no-store and versioned URLs also reduce stale assets elsewhere. This does not intentionally clear cookies, localStorage, accounts, or the Nexen ID.

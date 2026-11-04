@@ -33,6 +33,25 @@ def serve(token):
         except Exception: pass
     class Handler(http.server.SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs): super().__init__(*args, directory=str(UI_ROOT), **kwargs)
+        def send_response(self, code, message=None):
+            self._nexen_cache_header = False
+            return super().send_response(code, message)
+        def send_header(self, keyword, value):
+            if keyword.lower() == 'cache-control':
+                self._nexen_cache_header = True
+                value = 'no-store, no-cache, must-revalidate'
+            return super().send_header(keyword, value)
+        def end_headers(self):
+            if not getattr(self, '_nexen_cache_header', False):
+                self.send_header('Cache-Control','no-store, no-cache, must-revalidate')
+            return super().end_headers()
+        def send_head(self):
+            # Never serve a stale asset as 304 based on an old timestamp.
+            old = self.headers.get('If-Modified-Since')
+            if old is not None: del self.headers['If-Modified-Since']
+            try: return super().send_head()
+            finally:
+                if old is not None: self.headers['If-Modified-Since'] = old
         def do_POST(self):
             if not self.path.startswith('/__nexen/'):
                 if config['mode'] == 'isolated': return isolated.handle(self, STATE, config.get('login_only',False))
@@ -50,7 +69,7 @@ def serve(token):
                 self.send_response(200);self.send_header('Content-Type','application/json; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
             if urlsplit(self.path).path == '/nexen-runtime.js':
                 meta = {'version': identity.VERSION, 'id': identity.get_id() if config['mode']=='isolated' else None, 'loginOnly': config['mode']=='isolated' and bool(config.get('login_only')), 'isolated': config['mode']=='isolated'}
-                data=('window.NEXEN_META = '+json.dumps(meta)+';').encode('utf-8')
+                data=('window.NEXEN_META = '+json.dumps(meta)+";(function(){let checking=false;async function check(){if(checking||document.hidden)return;checking=true;try{const r=await fetch('/__nexen/meta',{cache:'no-store',credentials:'same-origin'});if(r.ok){const m=await r.json();if(m.version&&m.version!==window.NEXEN_META.version)location.reload()}}catch(_){}finally{checking=false}}setInterval(check,15000);document.addEventListener('visibilitychange',check)})();").encode('utf-8')
                 self.send_response(200); self.send_header('Content-Type','application/javascript; charset=utf-8'); self.send_header('Cache-Control','no-store'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data); return
             if config['mode'] == 'isolated' and not config.get('original_ui_test'): return isolated.handle(self, STATE, config.get('login_only',False))
             if config['mode'] == 'isolated' and self.path.startswith('/api/'): return isolated.handle(self, STATE, config.get('login_only',False))
@@ -78,6 +97,16 @@ def serve(token):
                     text=text.replace('</head>', '<script>window.RTCPeerConnection=undefined;window.webkitRTCPeerConnection=undefined;</script></head>')
                 text=text.replace('?v=513', '?v=513-nexen-'+identity.VERSION)
                 data=text.encode('utf-8');self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8')
+                # Flush HTTP cache on a new version, never cookies or browser storage.
+                from http.cookies import SimpleCookie, CookieError
+                browser_version = None
+                try:
+                    cookies=SimpleCookie(); cookies.load(self.headers.get('Cookie',''))
+                    if 'nexen_asset_version' in cookies: browser_version=cookies['nexen_asset_version'].value
+                except CookieError: pass
+                if browser_version != identity.VERSION:
+                    self.send_header('Clear-Site-Data','"cache"')
+                    self.send_header('Set-Cookie','nexen_asset_version='+identity.VERSION+'; Path=/; SameSite=Lax')
                 if config['mode']=='isolated': self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob: data:; object-src 'none'; base-uri 'none'")
                 self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
             if path == '/assets/js/config.js' and config.get('storage_endpoint'):
@@ -115,14 +144,19 @@ def reinstall_stable():
 def main():
     p=argparse.ArgumentParser(prog='nexen', description='Nexen ' + identity.VERSION)
     sub=p.add_subparsers(dest='cmd', required=True)
-    start=sub.add_parser('start'); start.add_argument('--no-contact', action='store_true'); start.add_argument('--connected', action='store_true'); start.add_argument('-L', action='store_true'); start.add_argument('--allow-signup', action='store_true'); start.add_argument('--original-ui-test', action='store_true'); start.add_argument('--basic-ui', action='store_true')
+    start=sub.add_parser('start'); start.add_argument('--no-contact', action='store_true',help=argparse.SUPPRESS); start.add_argument('--connected', action='store_true'); start.add_argument('-L', action='store_true'); start.add_argument('--allow-signup', action='store_true'); start.add_argument('--original-ui-test', action='store_true'); start.add_argument('--basic-ui', action='store_true')
     standalone=sub.add_parser('start-isolated', help='start the independent server (signups enabled by default)'); standalone.set_defaults(no_contact=True, connected=False); standalone.add_argument('-L',action='store_true',help='disable new accounts for this session'); standalone.add_argument('--allow-signup',action='store_true',help=argparse.SUPPRESS); standalone.add_argument('--original-ui-test',action='store_true',help=argparse.SUPPRESS); standalone.add_argument('--basic-ui',action='store_true')
-    sub.add_parser('stop'); sub.add_parser('repair', help='reinstall the latest stable version while keeping local data'); update=sub.add_parser('update'); update.add_argument('-B',action='store_true',help='install the latest newer beta or experimental preview'); sub.add_parser('id'); sub.add_parser('version'); storage=sub.add_parser('storage-endpoint'); storage.add_argument('url', help='HTTPS signer URL, or off to disable'); rem=sub.add_parser('remove'); rem.add_argument('category', choices=['usr-list','admin-policy','photos','chats','drive-assets','anylist']); rem.add_argument('--yes',action='store_true')
+    sub.add_parser('stop'); sub.add_parser('repair', help='reinstall the latest stable version while keeping local data'); update=sub.add_parser('update'); update.add_argument('-B',action='store_true',help='install the latest newer beta or experimental preview'); sub.add_parser('id'); sub.add_parser('version'); sub.add_parser('owner', help='show the saved isolated Owner'); storage=sub.add_parser('storage-endpoint'); storage.add_argument('url', help='HTTPS signer URL, or off to disable'); rem=sub.add_parser('remove'); rem.add_argument('category', choices=['usr-list','admin-policy','photos','chats','drive-assets','anylist']); rem.add_argument('--yes',action='store_true')
     worker=sub.add_parser('_serve'); worker.add_argument('token')
     args=p.parse_args()
     if args.cmd == '_serve': return serve(args.token)
     if args.cmd == 'version':
         print('Nexen V.'+identity.VERSION); return 0
+    if args.cmd == 'owner':
+        try: name=isolated.owner_name(STATE)
+        except (OSError, ValueError) as e: print('Could not inspect local Owner: '+str(e),file=sys.stderr); return 1
+        print('Local Owner: '+name if name else 'No local Owner is configured.')
+        return 0
     if args.cmd == 'id':
         try: print(identity.get_id()); return 0
         except (OSError,ValueError) as e: print('Could not read or create Nexen ID: '+str(e),file=sys.stderr); return 1
@@ -138,7 +172,7 @@ def main():
         except Exception as e:
             print('Could not check GitHub for updates: '+str(e),file=sys.stderr); return 1
         if release is None:
-            print('There are no updates or feature previews available at this time.' if args.B else 'There are no updates available at this time.')
+            print('There are no updates available at this time.')
             return 0
         r=record()
         if r and request('/__nexen/status',r.get('token','')):
@@ -182,12 +216,17 @@ def main():
         progress('Run nexen start to apply the setting.'); return 0
     if args.cmd == 'remove':
         progress('Checking independent-mode data and server status...')
-        try: config=json.loads((STATE/'config.json').read_text())
-        except (OSError,ValueError): config={}
-        if config.get('mode') != 'isolated': print('Removal is only available in isolated mode.',file=sys.stderr); return 1
+        # Removal only touches the independent SQLite database, even if the
+        # last session was connected. Never mutate local data while a server is running.
         r=record()
         if r and request('/__nexen/status',r.get('token','')): print('Stop Nexen before removing data.',file=sys.stderr); return 1
+        import socket
+        try:
+            with socket.create_connection(('127.0.0.1',PORT),timeout=1):
+                print('Port 63936 is in use. Stop Nexen before removing data.',file=sys.stderr); return 1
+        except OSError: pass
         progress('Target: %s. Data directory: %s' % (args.category, STATE))
+        if args.category == 'anylist': progress('This removes ALL local users (including Owner), sessions, chats, policies and stored files.')
         if not args.yes and input('Permanently delete/reset '+args.category+'? Type YES: ') != 'YES': print('Cancelled.'); return 1
         progress('Removing or resetting the selected local data...')
         try: isolated.remove(STATE,args.category)
@@ -246,6 +285,10 @@ def main():
         if config.get('original_ui_test'): progress('Warning: the independent original UI backend is incomplete; chat, servers and other features are not yet supported.')
     else:
         progress('Interface: NexChat 3; data uses the configured hosted services.')
+    if config['mode']=='isolated':
+        try: restored=isolated.restore_missing_owner(STATE)
+        except Exception as e: print('Could not check local Owner: '+str(e),file=sys.stderr); return 1
+        if restored: progress('Restored Owner role to the first existing local account: '+restored+'.')
     if config['mode']=='isolated' and not isolated.owner_exists(STATE):
         progress('No local Owner found. Create the local Owner account.')
         try:
@@ -254,7 +297,7 @@ def main():
             isolated.create_owner(STATE,username,password)
         except (ValueError,EOFError,KeyboardInterrupt) as e: print('Owner setup failed: '+str(e),file=sys.stderr); return 1
     elif config['mode']=='isolated':
-        progress('Existing local Owner found; saved credentials will be reused.')
+        progress('Existing local Owner: %s; saved credentials will be reused.' % isolated.owner_name(STATE))
         progress('To clear local users and create a new Owner, stop Nexen and run nexen remove usr-list.')
     tmp=STATE/'config.tmp';tmp.write_text(json.dumps(config));os.replace(tmp,STATE/'config.json')
     progress('Settings saved. Starting server on 0.0.0.0:%d...' % PORT)

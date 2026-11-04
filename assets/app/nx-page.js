@@ -35,7 +35,7 @@
             ${s.items.filter((i) => !i.hidden).map((i) => { items.push(i); const t = i.tint || (i.danger ? '#f2555a' : TINTS[n++ % TINTS.length]); return `<button type="button" data-id="${esc(i.id)}" data-label="${esc(i.label.toLowerCase())}" class="${i.danger ? 'danger' : ''}" style="--t:${t}">
               <span class="pg-ico"><i class="fa-solid ${i.icon || 'fa-circle'}"></i></span>${i.sub ? `<span class="grow pg-lbl"><b>${esc(i.label)}</b><small>${esc(i.sub)}</small></span>` : `<span class="grow">${esc(i.label)}</span>`}${i.count ? `<span class="count">${i.count}</span>` : ''}${i.badge ? `<span class="pg-badge">${esc(i.badge)}</span>` : ''}<i class="fa-solid fa-chevron-right pg-chev"></i></button>`; }).join('')}</div>`).join('')}
           </nav>
-          <div class="pg-foot">NexChat v3 · <span class="kbd">Esc</span> to close<br>Nexen V.${esc(window.NEXEN_META?.version || '3.1.6')}${window.NEXEN_META?.id ? ' · ID: ' + esc(window.NEXEN_META.id) : ''}</div>
+          <div class="pg-foot">NexChat v3 · <span class="kbd">Esc</span> to close<br>Nexen V.${esc(window.NEXEN_META?.version || '3.1.7')}${window.NEXEN_META?.id ? ' · ID: ' + esc(window.NEXEN_META.id) : ''}</div>
         </div>
       </aside>
       <main class="pg-main">

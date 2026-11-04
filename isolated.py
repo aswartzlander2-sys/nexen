@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 MAX_FILE=8*1024*1024
+OWNER_PERMISSIONS=frozenset(('ban_users','manage_roles','view_all_servers','post_anywhere','delete_messages','reset_passwords','delete_users','post_announcements','manage_storage','manage_storage_endpoints','review_appeals','view_audit'))
 
 class ClosingConnection(sqlite3.Connection):
     def __exit__(self, exc_type, exc, tb):
@@ -118,6 +119,18 @@ def handle(h,state,login_only):
             if path=='/api/me' and h.command=='GET' and not user: return respond(200,None)
             if not user: return respond(401,{'error':'Please sign in'})
             if path=='/api/me' and h.command=='GET': return respond(200,{'id':user['id'],'username':user['username'],'owner':bool(user['owner'])})
+            if path=='/api/owner-permissions':
+                if not user['owner']: return respond(403,{'error':'Owner access required'})
+                if h.command=='GET':
+                    rows=c.execute("SELECT key,value FROM policy WHERE key LIKE 'owner_perm:%'").fetchall()
+                    values={r['key'][11:]:r['value']=='1' for r in rows}
+                    return respond(200,{k:values.get(k,True) for k in OWNER_PERMISSIONS})
+                if h.command=='POST':
+                    b=body(); key=b.get('permission'); allowed=b.get('allowed')
+                    if key not in OWNER_PERMISSIONS or type(allowed) is not bool: return respond(400,{'error':'Invalid permission'})
+                    c.execute('INSERT INTO policy(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',('owner_perm:'+key,'1' if allowed else '0'))
+                    return respond(200,{'ok':True})
+
             if path=='/api/logout' and h.command=='POST':
                 token=next((s.strip()[6:] for s in h.headers.get('Cookie','').split(';') if s.strip().startswith('nxses=')),'');c.execute('DELETE FROM sessions WHERE token=?',(token,));return respond(200,{'ok':True},{'Set-Cookie':'nxses=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'})
             if path=='/api/messages' and h.command=='GET':

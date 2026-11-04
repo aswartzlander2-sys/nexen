@@ -1,4 +1,4 @@
-# Nexen 3.1.6
+# Nexen 3.1.7
 
 The NexChat Origin v3 SPA is the root interface, including the home, chat, server, and settings views. Legacy page links open the same SPA.
 
@@ -47,7 +47,7 @@ Independent accounts, chat and uploads live in `~/.nexen` (or the directory spec
 ## Version and installation ID
 
 ```sh
-nexen version   # Nexen V.3.1.6
+nexen version   # Nexen V.3.1.7
 nexen id        # six-digit ID, including any leading zeros
 ```
 
@@ -132,4 +132,4 @@ Run `python -m unittest discover -s tests -v` from the repository. Node.js, if i
 Network outages, firewall rules, unavailable third-party services, and misconfigured storage can still prevent requests from completing; no software can guarantee that fetches never fail. The UI now reports connection errors with guidance. Verify the Nexen process is running and the device can reach port 63936. In connected mode, the browser also needs access to the Supabase project and its CDN. Never expose a database service-role key in the frontend.
 
 ### Browser cache on update
-Starting with v3.1.6, Nexen sends no-store headers for its UI and requests a browser HTTP-cache flush when the version changes. Open v3.1.6+ tabs check for newer versions and reload when visible; after installing v3.1.6 from an older version, reload the page once. Browsers generally honor Clear-Site-Data only on secure origins (HTTPS or localhost); no-store and versioned URLs also reduce stale assets elsewhere. This does not intentionally clear cookies, localStorage, accounts, or the Nexen ID.
+Starting with v3.1.7, Nexen sends no-store headers for its UI and requests a browser HTTP-cache flush when the version changes. Open v3.1.7+ tabs check for newer versions and reload when visible; after installing v3.1.7 from an older version, reload the page once. Browsers generally honor Clear-Site-Data only on secure origins (HTTPS or localhost); no-store and versioned URLs also reduce stale assets elsewhere. This does not intentionally clear cookies, localStorage, accounts, or the Nexen ID.

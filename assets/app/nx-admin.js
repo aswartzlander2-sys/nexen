@@ -25,6 +25,7 @@
     { k: 'view_audit', ic: 'fa-clock-rotate-left', t: 'View the audit log', d: 'See every staff action.' },
   ];
   const DEFAULT_PERMS = {
+    owner: Object.fromEntries(PERMS.map((p) => [p.k, true])),
     sudo: Object.fromEntries(PERMS.map((p) => [p.k, true])),
     admin: Object.fromEntries(PERMS.map((p) => [p.k, ['ban_users', 'post_announcements', 'review_appeals', 'manage_storage'].includes(p.k)])),
   };
@@ -38,7 +39,7 @@
   const R = (u) => P().rank(u);
   const myRank = () => R(NX.me);
   const roleKey = (r) => ['', 'admin', 'sudo'][r];
-  const can = (k) => myRank() >= 3 || (myRank() > 0 && !!perms[roleKey(myRank())]?.[k]);
+  const can = (k) => myRank() >= 3 ? (!window.NEXEN_META?.isolated || !!perms.owner[k]) : (myRank() > 0 && !!perms[roleKey(myRank())]?.[k]);
   const canAuth = () => can('view_all_servers') || can('reset_passwords') || can('delete_users');
   const canAct = (u) => u.id !== NX.me.id && myRank() > R(u);
   // Nitro follows the rank rule too; only the owner may set their own.
@@ -777,12 +778,12 @@
   }
   function paintMatrix(el, editable) {
     el.innerHTML = `<div class="tbl-wrap"><table class="tbl adm-matrix"><thead><tr><th>Permission</th>
-      <th class="mx-owner" title="You: always every permission"><span class="mx-h"><i class="fa-solid fa-crown"></i><span>Owner</span></span><small>always on</small></th>
+      <th class="mx-owner" title="Owner permissions"><span class="mx-h"><i class="fa-solid fa-crown"></i><span>Owner</span></span>${window.NEXEN_META?.isolated ? '' : '<small>always on</small>'}</th>
       <th class="mx-sudo" title="Sudo Admins"><span class="mx-h"><i class="fa-solid fa-user-shield"></i><span class="mx-full">Sudo Admins</span><span class="mx-short">Sudo</span></span></th>
       <th class="mx-admin" title="Admins"><span class="mx-h"><i class="fa-solid fa-shield-halved"></i><span class="mx-full">Admins</span><span class="mx-short">Admin</span></span></th></tr></thead><tbody>
       ${PERMS.map((p) => `<tr data-k="${p.k}"><td><div class="who"><i class="fa-solid ${p.ic} muted" style="width:18px;text-align:center"></i><div><b>${esc(p.t)}</b><small>${esc(p.d)}</small></div></div></td>
-        <td><i class="fa-solid fa-circle-check adm-yes"></i></td>
-        ${['sudo', 'admin'].map((role) => `<td>${editable ? `<input type="checkbox" class="switch" data-role="${role}" ${perms[role][p.k] ? 'checked' : ''} aria-label="${esc(p.t)} for ${role}">`
+        <td>${window.NEXEN_META?.isolated && editable ? `<input type="checkbox" class="switch" data-role="owner" ${perms.owner[p.k] ? 'checked' : ''} aria-label="${esc(p.t)} for owner">` : (window.NEXEN_META?.isolated && !perms.owner[p.k] ? '<i class="fa-solid fa-circle-minus adm-no"></i>' : '<i class="fa-solid fa-circle-check adm-yes"></i>')}</td>
+        ${['sudo', 'admin'].map((role) => `<td>${editable && !window.NEXEN_META?.isolated ? `<input type="checkbox" class="switch" data-role="${role}" ${perms[role][p.k] ? 'checked' : ''} aria-label="${esc(p.t)} for ${role}">`
           : (perms[role][p.k] ? '<i class="fa-solid fa-circle-check adm-yes"></i>' : '<i class="fa-solid fa-circle-minus adm-no"></i>')}</td>`).join('')}</tr>`).join('')}
     </tbody></table></div>`;
     if (!editable) return;
@@ -794,28 +795,29 @@
         sw.disabled = false;
         if (error) { sw.checked = !on; return NX.toast(adminErr(error), { err: true }); }
         perms[role][k] = on;
-        NX.toast(`${role === 'sudo' ? 'Sudo Admins' : 'Admins'} ${on ? 'can now' : 'can no longer'}: ${PERMS.find((p) => p.k === k).t.toLowerCase()}.`);
+        NX.toast(`${role === 'owner' ? 'Owner' : role === 'sudo' ? 'Sudo Admins' : 'Admins'} ${on ? 'can now' : 'can no longer'}: ${PERMS.find((p) => p.k === k).t.toLowerCase()}.`);
       };
     });
   }
 
   /* ============ Owner ============ */
   async function ownerTab() {
-    body.innerHTML = head('Owner controls', 'Only you can see this. Decide what Sudo Admins and Admins are allowed to do; it applies instantly and the database enforces it.') + skel(3, 90);
+    body.innerHTML = head('Owner controls', window.NEXEN_META?.isolated ? 'Configure local Owner preferences. Admin operations are not yet implemented.' : 'Only you can see this. Decide what Sudo Admins and Admins are allowed to do; it applies instantly and the database enforces it.') + skel(3, 90);
     if (myRank() < 3) { body.innerHTML = emptyBox('fa-lock', 'Owner only', ''); return; }
     await Promise.all([loadUsers(), loadPerms(), loadRankRequests()]);
     if (!still('owner')) return;
     const n = (r) => users.filter((u) => R(u) === r).length;
-    body.innerHTML = head('Owner controls', 'Only you can see this. Decide what Sudo Admins and Admins are allowed to do; it applies instantly and the database enforces it.') + `
+    body.innerHTML = head('Owner controls', window.NEXEN_META?.isolated ? 'Configure local Owner preferences. Admin operations are not yet implemented.' : 'Only you can see this. Decide what Sudo Admins and Admins are allowed to do; it applies instantly and the database enforces it.') + `
       <div class="card adm-owner"><div class="adm-row-h">${P().avatar(NX.me, 54, { presence: true })}<div class="grow"><b style="font-size:17px">${P().nameText(NX.me)}</b><br><small style="color:var(--nitro)"><i class="fa-solid fa-crown"></i> Owner of NexChat</small></div>
         <div class="adm-ostats"><button data-goto="roles"><b>${n(2)}</b><small>Sudo Admins</small></button><button data-goto="roles"><b>${n(1)}</b><small>Admins</small></button><button data-goto="users"><b>${users.filter((u) => !R(u)).length}</b><small>Users</small></button></div></div></div>
       ${reviewQueue.length ? `<div class="card"><div class="adm-row-h"><h3><i class="fa-solid fa-inbox"></i> Rank-up requests</h3><span class="muted">${reviewQueue.length} waiting for you</span></div>${requestsHtml()}</div>` : ''}
-      <h2 class="sec-title" style="margin-top:26px">Role permissions <span class="muted" style="text-transform:none;font-weight:500;letter-spacing:0">· you always have every permission</span></h2>
+      <h2 class="sec-title" style="margin-top:26px">Role permissions <span class="muted" style="text-transform:none;font-weight:500;letter-spacing:0">· ${window.NEXEN_META?.isolated ? 'Owner permissions are configurable' : 'you always have every permission'}</span></h2>
       <div data-grid></div>
       <p class="hint" style="margin-top:10px"><i class="fa-solid fa-circle-info"></i> The rank rule applies on top of every switch: staff can never ban, reset the password of, delete or demote someone at or above their own rank.</p>
       <div class="adm-row-h" style="margin-top:26px"><h2 class="sec-title" style="margin:0">Recent staff activity</h2><button class="btn btn-quiet btn-sm" data-goto="audit">Full log <i class="fa-solid fa-arrow-right"></i></button></div>
       <div data-audit></div>`;
     wireRequests(body);
+    if (window.NEXEN_META?.isolated) body.querySelector('[data-grid]').insertAdjacentHTML('beforebegin','<p class="hint">Owner preferences are saved locally. Most admin actions are not implemented in the isolated backend and remain unavailable regardless of these settings. Owner controls remain accessible to change these switches.</p>');
     if (!permsLive) body.querySelector('[data-grid]').innerHTML = emptyBox('fa-database', 'Permissions aren’t set up yet', 'Run <code>supabase/roles_v2</code> in the Supabase SQL editor, then reload.');
     else paintMatrix(body.querySelector('[data-grid]'), true);
     paintAudit(body.querySelector('[data-audit]'), 8, 'all');

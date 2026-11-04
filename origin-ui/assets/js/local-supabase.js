@@ -25,6 +25,11 @@
     insert(){this.mode='write';return this} update(){this.mode='write';return this} upsert(){this.mode='write';return this} delete(){this.mode='write';return this}
     async execute(){
       if(this.mode!=='select')return {data:null,error:unsupported()};
+      if(this.table==='platform_role_perms'){
+        const r=await req('/api/owner-permissions');
+        if(r.error) return {data:null,error:r.error};
+        return {data:Object.entries(r.data).map(([perm,allowed])=>({role:'owner',perm,allowed})),error:null};
+      }
       if(this.table==='profiles'){
         const r=await req('/api/me');if(r.error||!r.data)return {data:null,error:r.error||{message:'Not signed in'}};
         const u=r.data;if(this.filters.id && String(this.filters.id)!==String(u.id)) return {data:null,error:unsupported()};
@@ -38,7 +43,7 @@
     then(resolve,reject){return this.execute().then(resolve,reject)}
   }
   function channel(){return {on(){return this},subscribe(cb){if(cb)setTimeout(()=>cb('CHANNEL_ERROR'),0);return this},track:async()=>{},untrack:async()=>{},presenceState:()=>({}),send:async()=>({error:unsupported()})}}
-  window.db={auth,from:table=>new Query(table),rpc:async(name)=>name==='is_username_available'?{data:true,error:null}:name==='nx_inbox'?{data:{v:0,servers:[],dms:[],friendships:[]},error:null}:{data:null,error:unsupported()},channel,removeChannel:async()=>{},storage:{from:()=>({upload:async()=>({data:null,error:unsupported()}),getPublicUrl:()=>({data:{publicUrl:''}})})}};
+  window.db={auth,from:table=>new Query(table),rpc:async(name,args={})=>name==='set_role_perm' && args.p_role==='owner'?req('/api/owner-permissions','POST',{permission:args.p_perm,allowed:args.p_allowed}):name==='is_username_available'?{data:true,error:null}:name==='nx_inbox'?{data:{v:0,servers:[],dms:[],friendships:[]},error:null}:{data:null,error:unsupported()},channel,removeChannel:async()=>{},storage:{from:()=>({upload:async()=>({data:null,error:unsupported()}),getPublicUrl:()=>({data:{publicUrl:''}})})}};
   window.authReady=auth.getSession().then(r=>r.data.session);
   // Account creation remains server-enforced; hide the signup tab when disabled.
   req('/api/config').then(r=>{

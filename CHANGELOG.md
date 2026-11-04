@@ -1,3 +1,7 @@
+# Nexen 3.1.7
+
+- Added persistent Owner permission switches in isolated mode. The isolated admin backend remains incomplete; switches do not implement missing admin operations.
+
 # Nexen 3.1.6
 
 - Flush browser HTTP cache when the app version changes, prevent stale cached assets and reload open tabs after a newer server starts. Cookies, browser storage, local accounts and the Nexen ID are not cleared.

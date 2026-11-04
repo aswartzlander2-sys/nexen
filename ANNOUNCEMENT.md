@@ -1,11 +1,11 @@
-# Introducing Nexen 2.00
+# Introducing Nexen 2.1.0
 
 Want to run NexChat from your own computer? **Nexen** is a command-line launcher with two ways to get started:
 
 - **Connected mode** hosts the original NexChat interface locally and connects it to the existing NexChat services.
-- **Independent mode** runs a separate local chat backend on your hardware. Create an Owner account, invite people on your network, send messages, and upload files without connecting to NexChat's hosted database.
+- **Independent mode** serves the original interface with an incomplete local backend. The separate basic local chat is available with `--no-contact --basic-ui`.
 
-Independent mode is an early version: it has a simplified interface and one shared chat. It does **not yet** include the original NexChat UI, servers, DMs, calls, Nitro, or the full admin system. Accounts, messages, and files are separate in each mode. Connected-mode file uploads need a secure storage signer configured by the operator.
+The independent original-UI backend is incomplete: its login and home shell work, but servers, chats, DMs, uploads, calls, Nitro, and admin are not implemented. The separate basic interface supports one shared chat and uploads. Accounts, messages, and files are separate in each mode. Connected-mode file uploads need a secure storage signer configured by the operator.
 
 ## Install Nexen
 
@@ -25,13 +25,13 @@ Reopen your terminal after installation. On Linux, you may need to add `~/.local
 
 ## Start your server
 
-For an independent local chat, run:
+To try the original interface with the incomplete independent backend, run:
 
 ```sh
 nexen start --no-contact
 ```
 
-The first time, you'll be prompted to choose your Owner username and password. Open **http://localhost:63936** on the host, or `http://<host-LAN-IP>:63936` from another device on the same network.
+For the separate working basic local chat, add `--basic-ui`. The first time, you'll be prompted to choose your Owner username and password. Open **http://localhost:63936** on the host, or `http://<host-LAN-IP>:63936` from another device on the same network.
 
 To block new account creation, stop the server and start it with:
 
@@ -39,7 +39,7 @@ To block new account creation, stop the server and start it with:
 nexen start --no-contact -L
 ```
 
-Nexen remembers your mode and login-only setting, so after stopping it you can use `nexen start` to restart with the same settings. To allow signups again, use `nexen start --allow-signup` while stopped. To return to connected mode, use `nexen start --connected --allow-signup` while stopped.
+A plain `nexen start` always starts connected mode. Use `--no-contact` each time for independent mode. The local login-only setting is retained; to allow signups again, use `nexen start --no-contact --allow-signup` while stopped.
 
 ```sh
 nexen stop

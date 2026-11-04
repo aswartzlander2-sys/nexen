@@ -15,7 +15,7 @@ def install_root():
     return Path.home()/'.local'/'share'/'nexen'
 
 def download():
-    request=urllib.request.Request(URL,headers={'User-Agent':'Nexen-Updater/2.00'})
+    request=urllib.request.Request(URL,headers={'User-Agent':'Nexen-Updater/2.1.0'})
     with urllib.request.urlopen(request,timeout=60) as response:
         data=response.read(MAX_DOWNLOAD+1)
     if len(data)>MAX_DOWNLOAD: raise ValueError('Download exceeds 50 MB')

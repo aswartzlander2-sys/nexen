@@ -170,22 +170,25 @@ def main():
     if r and request('/__nexen/status',r.get('token','')):
         if args.no_contact or args.connected or args.L or args.allow_signup or args.original_ui_test or args.basic_ui:
             print('Stop the running session before changing settings.',file=sys.stderr); return 1
-        progress('Nexen is already running at http://localhost:%d.' % PORT)
+        try: running_config=json.loads((STATE/'config.json').read_text())
+        except (OSError,ValueError): running_config={}
+        if running_config.get('mode') == 'isolated':
+            print('An independent session is already running. Stop it with nexen stop, then run nexen start for connected mode.',file=sys.stderr); return 1
+        progress('Nexen connected mode is already running at http://localhost:%d.' % PORT)
         progress('Use nexen stop before changing settings.'); return 0
     if args.no_contact and args.connected or args.L and args.allow_signup or args.original_ui_test and args.basic_ui:
         print('Conflicting options.',file=sys.stderr); return 1
     STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
     try: config=json.loads((STATE/'config.json').read_text())
     except (OSError,ValueError): config={'mode':'connected','login_only':False}
-    if args.no_contact: config['mode']='isolated'
-    if args.connected: config['mode']='connected'
+    # A plain start always selects the connected service, regardless of the last run.
+    config['mode']='isolated' if args.no_contact else 'connected'
     if args.L: config['login_only']=True
     if args.allow_signup: config['login_only']=False
-    if args.original_ui_test: config['original_ui_test']=True
-    if args.basic_ui: config['original_ui_test']=False
-    if config['mode']=='connected' and args.original_ui_test:
+    if args.no_contact: config['original_ui_test']=not args.basic_ui
+    if config['mode']=='connected' and (args.original_ui_test or args.basic_ui):
         print('The original-UI local test requires --no-contact.',file=sys.stderr); return 1
-    if config['mode']=='connected' and config['login_only']:
+    if config['mode']=='connected' and args.L:
         print('Login-only mode cannot be enforced against the hosted backend. Use --no-contact or --allow-signup.',file=sys.stderr); return 1
     try: machine_id=identity.get_id()
     except (OSError,ValueError) as e: print('Could not read or create Nexen ID: '+str(e),file=sys.stderr); return 1
@@ -193,6 +196,7 @@ def main():
     progress('Mode: %s; data and settings: %s' % (config['mode'], STATE))
     if config['mode']=='isolated':
         progress('Interface: %s; new accounts: %s.' % ('original UI test (incomplete)' if config.get('original_ui_test') else 'basic local chat', 'disabled' if config.get('login_only') else 'allowed'))
+        if config.get('original_ui_test'): progress('Warning: the independent original UI backend is incomplete; chat, servers and other features are not yet supported.')
     else:
         progress('Interface: original NexChat; data uses the configured hosted services.')
     if config['mode']=='isolated' and not isolated.owner_exists(STATE):

@@ -1,11 +1,11 @@
-# Nexen 2.00
+# Nexen 2.1.0
 
 Nexen has two **separate** modes:
 
 * **Connected (default):** serves the original NexChat frontend; it uses the hosted Supabase project and third-party services configured in that frontend. Existing accounts and chats remain on those services. This is not a self-hosted backend.
-* **Independent (`--no-contact`):** runs a new, dependency-free Python/SQLite backend, with a simplified local chat interface. It does not contact the hosted NexChat project or use third-party CDNs, STUN, TURN, or other online services. It is **not a full reproduction of NexChat**: the UI differs, and it currently has one shared text chat, accounts, and file uploads. It does not implement servers, DMs, voice/video, Nitro, roles beyond Owner, bans, or the original NexChat settings.
+* **Independent (`--no-contact`):** serves the original UI using a local backend compatibility layer. This is **incomplete**: login and the home shell work, but servers, chats, DMs, uploads, calls and other features do not. Use `--no-contact --basic-ui` for the separate basic local chat. Neither independent interface uses the hosted database.
 
-**Security:** This is an early implementation, not a security-audited production chat server. It serves HTTP, so passwords and messages are not protected against network observers. Use a trusted network or a correctly configured HTTPS reverse proxy, and restrict firewall access. HTTP on a LAN may also limit browser features. Do not expose this server directly to the public internet. A reverse proxy must preserve the original Host header. In independent mode accounts share the same general chat and any signed-in account can download uploaded files. There is no login rate limiting.
+**Security:** This is an early implementation, not a security-audited production chat server. It serves HTTP, so passwords and messages are not protected against network observers. Use a trusted network or a correctly configured HTTPS reverse proxy, and restrict firewall access. HTTP on a LAN may also limit browser features. Do not expose this server directly to the public internet. A reverse proxy must preserve the original Host header. In the basic independent interface accounts share the same general chat and any signed-in account can download uploaded files. There is no login rate limiting.
 
 ## Install
 
@@ -26,19 +26,19 @@ Reopen the terminal if `nexen` is not found. On Linux add `~/.local/bin` to PATH
 The CLI prints brief progress messages for startup, shutdown, updates and removals, including the selected mode, data location, server address and log location. Passwords and session tokens are never printed.
 
 ```sh
-nexen start                 # connected mode on a fresh install
-nexen start --no-contact    # independent mode; prompts for the local Owner on first run
+nexen start                 # always connected mode, using the original NexChat interface
+nexen start --no-contact    # original interface + incomplete independent backend
 nexen start --no-contact -L # independent mode, block account creation
 nexen stop
 ```
-Open `http://localhost:63936` or `http://<host-LAN-IP>:63936`. The server binds `0.0.0.0`. Only one instance can bind the port. Stop the server before changing settings. Mode and login-only settings persist across restarts; `nexen start` uses the previous settings. Use `nexen start --allow-signup` to re-enable signup or `nexen start --connected --allow-signup` to return to connected mode. `-L` is enforced by the independent server; it cannot be enforced against the hosted backend and is rejected in connected mode.
+Open `http://localhost:63936` or `http://<host-LAN-IP>:63936`. The server binds `0.0.0.0`. Only one instance can bind the port. Stop the server before changing settings. A plain `nexen start` always selects connected mode, even after an independent session; to use independent mode again, specify `--no-contact`. The independent login-only setting is retained: use `nexen start --no-contact --allow-signup` to re-enable signup. Independent data is kept when switching modes. `-L` is enforced by the independent server; it cannot be enforced against the hosted backend and is rejected in connected mode.
 
 Independent accounts, chat and uploads live in `~/.nexen` (or the directory specified by `NEXEN_STATE_DIR`); backing up that directory while stopped preserves them. Connected-mode data stays on the original services. Settings and data are not migrated between modes. Linux sets the server process name to `NexChats Nexen`; other OSes may show Python instead.
 
 ## Version and installation ID
 
 ```sh
-nexen version   # Nexen V.2.00
+nexen version   # Nexen V.2.1.0
 nexen id        # six-digit ID, including any leading zeros
 ```
 
@@ -48,14 +48,14 @@ The identifier is per OS user account, not guaranteed to be shared by different 
 
 ## Experimental original-UI test (incomplete)
 
-This optional test serves the repository's original NexChat login and home pages using local fonts and a new local compatibility adapter:
+Independent mode serves the repository's original NexChat login and home pages using local fonts and a new local compatibility adapter:
 
 ```sh
 nexen stop
-nexen start --no-contact --original-ui-test
+nexen start --no-contact
 ```
 
-Sign in with your existing independent-mode account. The login, signup, Owner identification, and original home shell are connected to the local account database. In a browser smoke test the login and home pages made no external requests. `-L` still disables registration at the server. The test setting is saved across restarts.
+Sign in with your existing independent-mode account. The login, signup, Owner identification, and original home shell are connected to the local account database. In a browser smoke test the login and home pages made no external requests. `-L` still disables registration at the server. Repeat `--no-contact` when starting an independent session; a plain start uses connected mode.
 
 **This is not a completed local NexChat backend.** The home shell shows empty server, friend and announcement lists. Server creation, actual chat/DMs, profiles/settings, file uploads, calls, admin, Nitro, and realtime are not implemented by this adapter; most interactions on those pages will fail. Do not use this test for real conversations. No existing simple-chat data is deleted, but it is not displayed in the original-UI test. To return to the existing independent chat, stop the server and run:
 
@@ -113,6 +113,6 @@ The original repository documentation identifies exposed iDrive credentials in i
 
 ## Testing and connection troubleshooting
 
-Run `python -m unittest discover -s tests -v` from the repository. Node.js, if installed, is used for an additional embedded JavaScript syntax check. Browser smoke tests covered the independent login, chat, upload, reload and logout flows and checked that they made no external requests. The connected login page and hosted authentication endpoint were smoke-tested without a real user account; connected-mode authenticated workflows, Windows installation and all browser/OS combinations have not been verified.
+Run `python -m unittest discover -s tests -v` from the repository. Node.js, if installed, is used for an additional embedded JavaScript syntax check. Browser smoke tests covered the basic independent login, chat, upload, reload and logout flows and checked that they made no external requests. The connected login page and hosted authentication endpoint were smoke-tested without a real user account; connected-mode authenticated workflows, Windows installation and all browser/OS combinations have not been verified.
 
 Network outages, firewall rules, unavailable third-party services, and misconfigured storage can still prevent requests from completing; no software can guarantee that fetches never fail. The UI now reports connection errors with guidance. Verify the Nexen process is running and the device can reach port 63936. In connected mode, the browser also needs access to the Supabase project and its CDN. Never expose a database service-role key in the frontend.

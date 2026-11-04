@@ -1,0 +1,48 @@
+// =============================================================================
+// NEXCHAT CONFIG
+// Get these from: Supabase Dashboard -> Settings -> API
+// Both values below are DESIGNED to be public/client-side. Never put the
+// service_role key or DB password here or in any file that ships to the browser.
+// =============================================================================
+window.NEXCHAT_CONFIG = {
+  SUPABASE_URL: 'https://xqzibelnvjlmavgrpyve.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxemliZWxudmpsbWF2Z3JweXZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNjg5NjYsImV4cCI6MjEwMjY0NDk2Nn0.kW3xwbSvlaSnhU_eGSjIR8E2HzdxtYvBRxy4wbJ_Xgo',
+
+  // File signing. Leave empty to use the legacy in-browser signer. Once the
+  // `nexchat-storage` Edge Function is deployed (see supabase/README.md), set:
+  //   STORAGE_ENDPOINT: 'https://xqzibelnvjlmavgrpyve.supabase.co/functions/v1/nexchat-storage',
+  STORAGE_ENDPOINT: '',
+  // CloudGate on Wasmer: where every NEW upload goes (chat files, avatars,
+  // icons, wallpapers, and each user's encrypted drive). Old iDrive e2 links
+  // already in the database keep working through the signer above.
+  // This login ships to every browser, so treat the bucket as readable by
+  // anyone who looks; private drive files are encrypted before upload.
+  CLOUDGATE: {
+    // Server-side proxy that keeps the storage logins off the browser
+    // (supabase/functions/cloudgate-proxy). Once it is deployed, set:
+    //   proxy: 'https://xqzibelnvjlmavgrpyve.supabase.co/functions/v1/cloudgate-proxy',
+    // and remove user/pass from the endpoints below.
+    proxy: '',
+    // Used only until storage groups are set up in Admin -> Storage endpoints
+    // (supabase/storage_groups.sql). Then the database list is used instead.
+    // Each endpoint has its own login. An endpoint without a username and
+    // password is skipped. Every endpoint runs the same CloudGate API.
+    endpoints: [
+      // Configure a secure server-side proxy; credentials must not be shipped to browsers.
+      // nx-storage: fill in the username and password (or set them in Admin -> Storage endpoints).
+      { name: 'nx-storage', endpoint: 'https://nx-storage.alexaero.top' },
+    ],
+    category: 'nexchats-us1',
+    cdn: 'd1dncmkdpaif79.cloudfront.net',
+    // Default My Drive size for a user with no quota of their own yet. Admins
+    // change it per user (Admin -> Users, or Storage requests).
+    driveQuotaGB: 5,
+    // Largest single file in My Drive, in GB.
+    driveMaxFileGB: 5,
+  },
+  // TURN relays (optional). Only used when two people can't connect directly
+  // (strict NAT / school & office networks). A free public relay is the
+  // fallback; your own TURN (e.g. a free Metered or Cloudflare TURN key) is
+  // far faster. Format: [{ urls: 'turn:host:3478', username: '...', credential: '...' }]
+  TURN_SERVERS: null,
+};

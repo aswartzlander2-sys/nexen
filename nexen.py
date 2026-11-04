@@ -105,7 +105,8 @@ def main():
     p=argparse.ArgumentParser(prog='nexen', description='Nexen ' + identity.VERSION)
     sub=p.add_subparsers(dest='cmd', required=True)
     start=sub.add_parser('start'); start.add_argument('--no-contact', action='store_true'); start.add_argument('--connected', action='store_true'); start.add_argument('-L', action='store_true'); start.add_argument('--allow-signup', action='store_true'); start.add_argument('--original-ui-test', action='store_true'); start.add_argument('--basic-ui', action='store_true')
-    sub.add_parser('stop'); update=sub.add_parser('update'); update.add_argument('-B',action='store_true',help='install the latest newer beta or experimental preview'); sub.add_parser('id'); sub.add_parser('version'); storage=sub.add_parser('storage-endpoint'); storage.add_argument('url', help='HTTPS signer URL, or off to disable'); rem=sub.add_parser('remove'); rem.add_argument('category', choices=['usr-list','admin-policy','photos','chats','drive-assets','anylist']); rem.add_argument('--yes',action='store_true')
+    standalone=sub.add_parser('start-isolated', help='start the independent server (signups enabled by default)'); standalone.set_defaults(no_contact=True, connected=False); standalone.add_argument('-L',action='store_true',help='disable new accounts for this session'); standalone.add_argument('--allow-signup',action='store_true',help=argparse.SUPPRESS); standalone.add_argument('--original-ui-test',action='store_true',help=argparse.SUPPRESS); standalone.add_argument('--basic-ui',action='store_true')
+    sub.add_parser('stop'); sub.add_parser('repair', help='reinstall the latest stable version while keeping local data'); update=sub.add_parser('update'); update.add_argument('-B',action='store_true',help='install the latest newer beta or experimental preview'); sub.add_parser('id'); sub.add_parser('version'); storage=sub.add_parser('storage-endpoint'); storage.add_argument('url', help='HTTPS signer URL, or off to disable'); rem=sub.add_parser('remove'); rem.add_argument('category', choices=['usr-list','admin-policy','photos','chats','drive-assets','anylist']); rem.add_argument('--yes',action='store_true')
     worker=sub.add_parser('_serve'); worker.add_argument('token')
     args=p.parse_args()
     if args.cmd == '_serve': return serve(args.token)
@@ -114,6 +115,10 @@ def main():
     if args.cmd == 'id':
         try: print(identity.get_id()); return 0
         except (OSError,ValueError) as e: print('Could not read or create Nexen ID: '+str(e),file=sys.stderr); return 1
+    if args.cmd == 'repair':
+        progress('Reinstalling the latest stable version; local data and ID will be kept.')
+        progress('The installer will ask you to stop Nexen if the server is running.')
+        return subprocess.run([sys.executable, str(ROOT/'install.py')]).returncode
     if args.cmd == 'update':
         if ROOT != updater.install_root().resolve():
             print('Updates are only supported for installer-managed installations. Update this checkout with git instead.',file=sys.stderr); return 1
@@ -206,13 +211,15 @@ def main():
     except (OSError,ValueError): config={'mode':'connected','login_only':False}
     # A plain start always selects the connected service, regardless of the last run.
     config['mode']='isolated' if args.no_contact else 'connected'
-    if args.L: config['login_only']=True
-    if args.allow_signup: config['login_only']=False
+    # Signups are enabled for each independent start unless -L is explicit.
+    # In particular, migrate old saved login-only preferences to this default.
+    if config['mode']=='isolated': config['login_only']=bool(args.L)
+    elif args.allow_signup: config['login_only']=False
     if args.no_contact: config['original_ui_test']=not args.basic_ui
     if config['mode']=='connected' and (args.original_ui_test or args.basic_ui):
-        print('The original-UI local test requires --no-contact.',file=sys.stderr); return 1
+        print('The original-UI local test requires start-isolated.',file=sys.stderr); return 1
     if config['mode']=='connected' and args.L:
-        print('Login-only mode cannot be enforced against the hosted backend. Use --no-contact or --allow-signup.',file=sys.stderr); return 1
+        print('Login-only mode cannot be enforced against the hosted backend. Use start-isolated -L.',file=sys.stderr); return 1
     if config['mode']=='isolated':
         try: machine_id=identity.get_id()
         except (OSError,ValueError) as e: print('Could not read or create Nexen ID: '+str(e),file=sys.stderr); return 1

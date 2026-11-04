@@ -1,11 +1,11 @@
-# Nexen 3.1.0
+# Nexen 3.1.1
 
 The NexChat Origin v3 SPA is the root interface, including the home, chat, server, and settings views. Legacy page links open the same SPA.
 
 Nexen has two **separate** modes:
 
 * **Connected (default):** serves the original NexChat frontend; it uses the hosted Supabase project and third-party services configured in that frontend. Existing accounts and chats remain on those services. This is not a self-hosted backend.
-* **Independent (`--no-contact`):** serves the original UI using a local backend compatibility layer. This is **incomplete**: login and the home shell work, but servers, chats, DMs, uploads, calls and other features do not. Use `--no-contact --basic-ui` for the separate basic local chat. Neither independent interface uses the hosted database.
+* **Independent (`start-isolated`):** serves the original UI using a local backend compatibility layer. This is **incomplete**: login and the home shell work, but servers, chats, DMs, uploads, calls and other features do not. Use `start-isolated --basic-ui` for the separate basic local chat. Neither independent interface uses the hosted database.
 
 **Security:** This is an early implementation, not a security-audited production chat server. It serves HTTP, so passwords and messages are not protected against network observers. Use a trusted network or a correctly configured HTTPS reverse proxy, and restrict firewall access. HTTP on a LAN may also limit browser features. Do not expose this server directly to the public internet. A reverse proxy must preserve the original Host header. In the basic independent interface accounts share the same general chat and any signed-in account can download uploaded files. There is no login rate limiting.
 
@@ -29,26 +29,26 @@ The CLI prints brief progress messages for startup, shutdown, updates and remova
 
 ```sh
 nexen start                 # always connected mode, using the original NexChat interface
-nexen start --no-contact    # original interface + incomplete independent backend
-nexen start --no-contact -L # independent mode, block account creation
+nexen start-isolated    # original interface + incomplete independent backend
+nexen start-isolated -L # independent mode, block account creation
 nexen stop
 ```
-Open `http://localhost:63936` or `http://<host-LAN-IP>:63936`. The server binds `0.0.0.0`. Only one instance can bind the port. Stop the server before changing settings. A plain `nexen start` always selects connected mode, even after an independent session; to use independent mode again, specify `--no-contact`. The independent login-only setting is retained: use `nexen start --no-contact --allow-signup` to re-enable signup. Independent data is kept when switching modes. `-L` is enforced by the independent server; it cannot be enforced against the hosted backend and is rejected in connected mode.
+Open `http://localhost:63936` or `http://<host-LAN-IP>:63936`. The server binds `0.0.0.0`. Only one instance can bind the port. Stop the server before changing settings. A plain `nexen start` always selects connected mode, even after an independent session; to use independent mode again, specify `start-isolated`. Signups are enabled by default on each independent start, even if a previous session used `-L`. Independent data is kept when switching modes. `-L` is enforced by the independent server; it cannot be enforced against the hosted backend and is rejected in connected mode.
 
-On the first `nexen start --no-contact`, Nexen prompts for an Owner username and password. It stores the username and a salted password hash in the local database; the same Owner is reused on subsequent independent starts, so the prompt does not repeat. The CLI reports when an existing Owner is reused. To remove **all local users**, including the Owner, stop an independent session and run `nexen remove usr-list`; the next independent start prompts for a new Owner. This also signs out local users. It does not remove chats or files, and `nexen remove anylist` also clears users. Back up the data directory before removing anything.
+On the first `nexen start-isolated`, Nexen prompts for an Owner username and password. It stores the username and a salted password hash in the local database; the same Owner is reused on subsequent independent starts, so the prompt does not repeat. The CLI reports when an existing Owner is reused. To remove **all local users**, including the Owner, stop an independent session and run `nexen remove usr-list`; the next independent start prompts for a new Owner. This also signs out local users. It does not remove chats or files, and `nexen remove anylist` also clears users. Back up the data directory before removing anything.
 
-When `-L` is active, account creation is refused by the local server, and Sign in fills the whole tab control. The setting persists for independent mode until you use `--no-contact --allow-signup`.
+When `-L` is active, account creation is refused by the local server, and Sign in fills the whole tab control. The setting applies only to that session; the next ordinary `nexen start-isolated` allows signup.
 
 Independent accounts, chat and uploads live in `~/.nexen` (or the directory specified by `NEXEN_STATE_DIR`); backing up that directory while stopped preserves them. Connected-mode data stays on the original services. Settings and data are not migrated between modes. Linux sets the server process name to `NexChats Nexen`; other OSes may show Python instead.
 
 ## Version and installation ID
 
 ```sh
-nexen version   # Nexen V.3.1.0
+nexen version   # Nexen V.3.1.1
 nexen id        # six-digit ID, including any leading zeros
 ```
 
-The first `nexen id` or independent `nexen start --no-contact` generates a random ID and stores it in `~/.nexen-identity`, separately from the program and `~/.nexen` data. It survives stopping, normal application removal/reinstallation, updates, and `nexen remove anylist`, provided this identity file is retained. Keep a backup if you need to preserve it through operating-system reinstall, profile deletion or disk replacement. If the file is deleted, a new ID is generated. The ID is not a secret; it is displayed in independent mode to anyone who can access that Nexen UI. Connected mode does not display it. `nexen id` remains available in either mode.
+The first `nexen id` or independent `nexen start-isolated` generates a random ID and stores it in `~/.nexen-identity`, separately from the program and `~/.nexen` data. It survives stopping, normal application removal/reinstallation, updates, and `nexen remove anylist`, provided this identity file is retained. Keep a backup if you need to preserve it through operating-system reinstall, profile deletion or disk replacement. If the file is deleted, a new ID is generated. The ID is not a secret; it is displayed in independent mode to anyone who can access that Nexen UI. Connected mode does not display it. `nexen id` remains available in either mode.
 
 The identifier is per OS user account, not guaranteed to be shared by different users on the same computer. It is randomly chosen from one million possibilities, so two installations can occasionally get the same ID; six digits cannot guarantee global uniqueness. If `NEXEN_IDENTITY_FILE` is set, that path is used instead, and must also be retained.
 
@@ -58,18 +58,22 @@ Independent mode serves the requested NexChat 3 login and home pages using local
 
 ```sh
 nexen stop
-nexen start --no-contact
+nexen start-isolated
 ```
 
-Sign in with your existing independent-mode account. The login, signup, Owner identification, and original home shell are connected to the local account database. In a browser smoke test the login and home pages made no external requests. `-L` still disables registration at the server. Repeat `--no-contact` when starting an independent session; a plain start uses connected mode.
+Sign in with your existing independent-mode account. The login, signup, Owner identification, and original home shell are connected to the local account database. In a browser smoke test the login and home pages made no external requests. `-L` still disables registration at the server. Repeat `start-isolated` when starting an independent session; a plain start uses connected mode.
 
 **This is not a completed local NexChat backend.** The home shell shows empty local server and friend lists; built-in news is still visible. Server creation, actual chat/DMs, profiles/settings, file uploads, calls, admin, Nitro, and realtime are not implemented by this adapter; most interactions on those pages will fail. Do not use this test for real conversations. No existing simple-chat data is deleted, but it is not displayed in the original-UI test. To return to the existing independent chat, stop the server and run:
 
 ```sh
-nexen start --no-contact --basic-ui
+nexen start-isolated --basic-ui
 ```
 
 The independent UI restricts browser resource requests to the local origin and disables WebRTC; it is not a substitute for firewall-level network isolation or a security audit. The server remains plain HTTP. This test does not change connected mode.
+
+## Repair an installation
+
+Run `nexen stop`, then `nexen repair` to reinstall the latest stable version from GitHub while preserving local data, settings and the ID. The server must be stopped. This requires internet access and an existing version of Nexen with the `repair` command; for older installations use the one-time repair script first.
 
 ## Updates and preview channels
 
@@ -80,7 +84,7 @@ nexen update       # newest newer stable release or numeric version on main; nev
 nexen update -B    # newest newer B or E preview release or experimental branch
 ```
 
-A check may run while Nexen is running. If an update is available, stop Nexen before installing it, then run the update command again. If no matching newer version exists, the CLI prints the corresponding no-updates message. A network or API error is reported as an error instead. Both commands require internet access—even if you use `--no-contact`—and preserve the local data and ID. Beta and experimental versions are opt-in per command; a future stable bug-fix release is available via normal `nexen update`, including to someone running an older beta. The updater does not downgrade a newer installed version.
+A check may run while Nexen is running. If an update is available, stop Nexen before installing it, then run the update command again. If no matching newer version exists, the CLI prints the corresponding no-updates message. A network or API error is reported as an error instead. Both commands require internet access—even if you use `start-isolated`—and preserve the local data and ID. Beta and experimental versions are opt-in per command; a future stable bug-fix release is available via normal `nexen update`, including to someone running an older beta. The updater does not downgrade a newer installed version.
 
 Stable updates check published stable releases and the numeric version on `main`, choosing the newer. Preview updates (`-B`) check B and E releases and the `experimental` branch when present; they never install a preview without `-B`. Branch downloads are pinned to the commit whose version was checked. Network or malformed-version errors are reported, not treated as “no updates.” A tag or commit must contain the complete application. Older installed versions check releases only: to receive this updater, publish a stable GitHub Release or rerun the installer after pushing this package to main. See `RELEASING.md`.
 

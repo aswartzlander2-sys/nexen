@@ -1,3 +1,13 @@
+# Nexen 3.1.1
+
+- Add `nexen start-isolated` for independent mode; `nexen start` remains connected.
+- Allow local account creation by default, even if a previous session used `-L`; `-L` disables signup for that session only. The old `start --no-contact` spelling remains compatible.
+- Add `nexen repair` to reinstall the latest stable version without removing local data or the ID. Stop the server first.
+
+# Next release (unpublished)
+
+- Add `nexen repair` to reinstall the latest stable application without removing local data, settings, or the installation ID. Stop the server first.
+
 # Nexen 3.1.0
 
 - Make the NexChat Origin SPA the canonical root UI for the whole application, including settings and legacy page URLs.
